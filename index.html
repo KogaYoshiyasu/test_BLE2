@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLE デバイス受信</title>
+</head>
+<body>
+  <h1>BLE デバイスに接続</h1>
+  <button id="connectButton">デバイスをスキャン</button>
+  <p id="status">ステータス: 未接続</p>
+
+  <script>
+    const connectButton = document.getElementById('connectButton');
+    const statusText = document.getElementById('status');
+
+    connectButton.addEventListener('click', async () => {
+      try {
+        // BLE デバイスをスキャン
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true, // 任意のデバイスをスキャン
+          optionalServices: []   // 必要に応じてサービス UUID を指定
+        });
+
+        statusText.textContent = `ステータス: ${device.name} に接続中...`;
+
+        // デバイスに接続
+        const server = await device.gatt.connect();
+        statusText.textContent = `ステータス: ${device.name} に接続成功！`;
+
+        // 必要に応じてサービスやキャラクタリスティックを取得
+        // const service = await server.getPrimaryService('service-uuid');
+        // const characteristic = await service.getCharacteristic('characteristic-uuid');
+
+      } catch (error) {
+        console.error(error);
+        statusText.textContent = 'ステータス: 接続エラー';
+      }
+    });
+  </script>
+</body>
+</html>
