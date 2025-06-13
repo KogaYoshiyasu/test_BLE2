@@ -2,39 +2,45 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BLE デバイス受信</title>
+  <title>BLE距離推定</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .log { margin-top: 1em; }
+  </style>
 </head>
 <body>
-  <h1>BLE デバイスに接続</h1>
-  <button id="connectButton">デバイスをスキャン</button>
-  <p id="status">ステータス: 未接続</p>
+  <h1>BLE距離推定ツール</h1>
+  <button id="start-scan">スキャン開始</button>
+
+  <div class="log" id="log"></div>
 
   <script>
-    const connectButton = document.getElementById('connectButton');
-    const statusText = document.getElementById('status');
-
-    connectButton.addEventListener('click', async () => {
+    document.getElementById("start-scan").addEventListener("click", async () => {
       try {
-        // BLE デバイスをスキャン
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true, // 任意のデバイスをスキャン
-          optionalServices: []   // 必要に応じてサービス UUID を指定
+        const scan = await navigator.bluetooth.requestLEScan({
+          acceptAllAdvertisements: true
         });
 
-        statusText.textContent = `ステータス: ${device.name} に接続中...`;
+        navigator.bluetooth.addEventListener('advertisementreceived', event => {
+          const deviceName = event.device.name || '(名前なし)';
+          const rssi = event.rssi;
+          const txPower = -59; // 通常のTxPower仮定値（必要に応じて調整）
 
-        // デバイスに接続
-        const server = await device.gatt.connect();
-        statusText.textContent = `ステータス: ${device.name} に接続成功！`;
+          // 距離推定計算
+          const distance = Math.pow(10, (txPower - rssi) / 20);
 
-        // 必要に応じてサービスやキャラクタリスティックを取得
-        // const service = await server.getPrimaryService('service-uuid');
-        // const characteristic = await service.getCharacteristic('characteristic-uuid');
+          // 表示更新
+          const logDiv = document.getElementById('log');
+          logDiv.innerHTML = `
+            <p>📡 デバイス名: <strong>${deviceName}</strong></p>
+            <p>🔋 RSSI: ${rssi} dBm</p>
+            <p>📏 推定距離: <strong>${distance.toFixed(2)} m</strong></p>
+            <hr>
+          `;
+        });
 
-      } catch (error) {
-        console.error(error);
-        statusText.textContent = 'ステータス: 接続エラー';
+      } catch (err) {
+        alert("スキャンに失敗しました: " + err);
       }
     });
   </script>
