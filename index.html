@@ -2,39 +2,36 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BLE デバイス受信</title>
+  <title>BLE RSSI リアルタイム受信</title>
 </head>
 <body>
-  <h1>BLE デバイスに接続</h1>
-  <button id="connectButton">デバイスをスキャン</button>
-  <p id="status">ステータス: 未接続</p>
+  <h1>リアルタイム RSSI 表示</h1>
+  <button id="connect">BLEデバイスに接続</button>
+  <p id="rssi">RSSI: 未取得</p>
 
   <script>
-    const connectButton = document.getElementById('connectButton');
-    const statusText = document.getElementById('status');
+    const serviceUuid = '12345678-1234-5678-1234-56789abcdef0';
+    const characteristicUuid = 'abcdefab-1234-5678-1234-56789abcdef1';
 
-    connectButton.addEventListener('click', async () => {
+    document.getElementById('connect').addEventListener('click', async () => {
       try {
-        // BLE デバイスをスキャン
         const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true, // 任意のデバイスをスキャン
-          optionalServices: []   // 必要に応じてサービス UUID を指定
+          filters: [{ services: [serviceUuid] }]
         });
 
-        statusText.textContent = `ステータス: ${device.name} に接続中...`;
-
-        // デバイスに接続
         const server = await device.gatt.connect();
-        statusText.textContent = `ステータス: ${device.name} に接続成功！`;
+        const service = await server.getPrimaryService(serviceUuid);
+        const characteristic = await service.getCharacteristic(characteristicUuid);
 
-        // 必要に応じてサービスやキャラクタリスティックを取得
-        // const service = await server.getPrimaryService('service-uuid');
-        // const characteristic = await service.getCharacteristic('characteristic-uuid');
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const value = event.target.value;
+          const rssi = value.getInt8(0);
+          document.getElementById('rssi').textContent = `RSSI: ${rssi} dBm`;
+        });
 
-      } catch (error) {
-        console.error(error);
-        statusText.textContent = 'ステータス: 接続エラー';
+      } catch (err) {
+        alert('接続エラー: ' + err);
       }
     });
   </script>
