@@ -24,9 +24,10 @@
         const characteristic = await service.getCharacteristic(characteristicUuid);
 
         await characteristic.startNotifications();
-        
-        device.addEventListener('advertisementreceived', event => {
-          document.getElementById('rssi').textContent = `RSSI: ${event.rssi} dBm`;
+        characteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const value = event.target.value;
+          const rssi = value.getInt8(0);
+          document.getElementById('rssi').textContent = `RSSI: ${rssi} dBm`;
         });
 
       } catch (err) {
