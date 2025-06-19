@@ -13,8 +13,7 @@
     document.getElementById('scan').addEventListener('click', async () => {
       try {
         const options = {
-          acceptALLDevices: true,
-          keepRepeatedDevices: true
+          acceptAllAdvertisements: true
         };
 
         const scan = await navigator.bluetooth.requestLEScan(options);
