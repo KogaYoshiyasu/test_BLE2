@@ -12,11 +12,8 @@
   <script>
     document.getElementById('scan').addEventListener('click', async () => {
       try {
-        const options = {
-          acceptAllAdvertisements: true
-        };
 
-        const scan = await navigator.bluetooth.requestLEScan(options);
+        const scan = await navigator.bluetooth.requestLEScan({ acceptAllAdvertisements: true });
 
         navigator.bluetooth.addEventListener('advertisementreceived', event => {
           console.log(event);
