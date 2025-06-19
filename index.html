@@ -5,15 +5,19 @@
   <title>BLE RSSI リアルタイム受信</title>
 </head>
 <body>
-  <h1>リアルタイム RSSI 表示 5</h1>
+  <h1>リアルタイム RSSI 表示10</h1>
   <button id="scan">BLEデバイスをスキャン</button>
   <p id="rssi">RSSI: 未取得</p>
 
   <script>
     document.getElementById('scan').addEventListener('click', async () => {
       try {
+        const options = {
+          filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
+          keepRepeatedDevices: true
+        };
 
-        const scan = await navigator.bluetooth.requestLEScan();
+        const scan = await navigator.bluetooth.requestLEScan(options);
 
         navigator.bluetooth.addEventListener('advertisementreceived', event => {
           console.log(event);
