@@ -7,7 +7,7 @@
 <body>
   <h1>リアルタイム RSSI 表示10</h1>
   <button id="scan">BLEデバイスをスキャン</button>
-  <p id="rssi">RSSI: 未取得</p>
+  <p id="rssi">未取得</p>
 
   <script>
     document.getElementById('scan').addEventListener('click', async () => {
@@ -22,7 +22,33 @@
         navigator.bluetooth.addEventListener('advertisementreceived', event => {
           console.log(event);
           if (event.rssi !== undefined) {
-            document.getElementById('rssi').textContent = `RSSI: ${event.rssi} dBm`;
+            const array = []
+            if (event.device !== undefined) {
+              array.push(event.device)
+            } else{array.push("device無し")}
+            if (event.uuids !== undefined) {
+              array.push(event.uuids)
+            }else{array.push("uuids無し")}
+            if (event.name !== undefined) {
+              array.push(event.name)
+            }else{array.push("name無し")}
+            if (event.appearance !== undefined) {
+              array.push(event.appearance)
+            }else{array.push("appearance無し")}
+            if (event.txPower !== undefined) {
+              array.push(event.txPower)
+            }else{array.push("txPower無し")}
+            if (event.rssi !== undefined) {
+              array.push(event.rssi)
+            }else{array.push("rssi無し")}
+            if (event.manufacturerdata !== undefined) {
+              array.push(event.manufacturerdata)
+            }else{array.push("manufacturerData無し")}
+            if (event.serviceData !== undefined) {
+              array.push(event.serviceData)
+            }else{array.push("serviceData無し")}
+
+            document.getElementById('rssi').textContent = array.join('\n')
           }
         });
 
