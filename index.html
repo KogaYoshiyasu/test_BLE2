@@ -27,10 +27,14 @@
               array.push(event.rssi)
               i++
               if(i%10==0){
-                
-                array.push('\n')
+                var sum = 0
+                var ave = 0
+                for(j = i-10; j = i; j++){
+                  sum += array[j]
+                }
+                ave = sum/10
               }
-            document.getElementById('rssi').innerText = array
+            document.getElementById('rssi').innerText = ave
           }
         });
 
