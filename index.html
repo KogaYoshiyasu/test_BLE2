@@ -11,6 +11,7 @@
 
   <script>
     const array = []
+    var i = 0;
     document.getElementById('scan').addEventListener('click', async () => {
       try {
         const options = {
@@ -24,8 +25,12 @@
           console.log(event);
           if (event.rssi !== undefined) {
               array.push(event.rssi)
-
-            document.getElementById('rssi').innerText = event.rssi
+              i++
+              if(i%10==0){
+                
+                array.push('\n')
+              }
+            document.getElementById('rssi').innerText = array
           }
         });
 
