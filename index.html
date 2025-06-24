@@ -48,7 +48,7 @@
               array.push(event.serviceData)
             }else{array.push("serviceData無し")}
 
-            document.getElementById('rssi').textContent = array.join('\n')
+            document.getElementById('rssi').innerText = array.join('\n')
           }
         });
 
