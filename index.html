@@ -26,7 +26,7 @@
         navigator.bluetooth.addEventListener('advertisementreceived', event => {
           console.log(event);
           if (event.rssi !== undefined) {
-            document.getElementById('rssi').innerText = event.rssi
+            document.getElementById('rssi').textContent = event.rssi
           }
         });
 
