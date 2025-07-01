@@ -5,18 +5,19 @@
   <title>BLE RSSI リアルタイム受信</title>
 </head>
 <body>
-  <h1>リアルタイム RSSI 表示10</h1>
+  <h1>リアルタイム RSSI 表示</h1>
   <button id="scan">BLEデバイスをスキャン</button>
   <p id="rssi">未取得</p>
+  <p id="avg">平均RSSI: 未取得</p>
 
   <script>
-    const array = []
-    var i = 0
-    var sum = 0
-    var ave = 0
+    const rssiArray = [];
+    const maxSamples = 10;
+
     document.getElementById('scan').addEventListener('click', async () => {
       try {
         const options = {
+          // acceptAllAdvertisements: true,
           filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
           keepRepeatedDevices: true
         };
@@ -24,9 +25,21 @@
         const scan = await navigator.bluetooth.requestLEScan(options);
 
         navigator.bluetooth.addEventListener('advertisementreceived', event => {
-          console.log(event);
           if (event.rssi !== undefined) {
-            document.getElementById('rssi').textContent = event.rssi
+            if (event.rssi < 0) {
+
+              rssiArray.push(event.rssi);
+
+              if (rssiArray.length > maxSamples) {
+                rssiArray.shift();
+              }
+
+              document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+
+              const avg = rssiArray.reduce((sum, val) => sum + val, 0) / rssiArray.length;
+              document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+
+            }
           }
         });
 
