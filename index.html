@@ -2,51 +2,167 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>BLE RSSI リアルタイム受信</title>
+  <title>BLE RSSI リアルタイム受信 & ルート案内</title>
 </head>
 <body>
-  <h1>リアルタイム RSSI 表示</h1>
-  <button id="scan">BLEデバイスをスキャン</button>
-  <p id="rssi">未取得</p>
+  <h1>BLE RSSI スキャン & ルート案内</h1>
+
+  <button id="scan">スキャン開始</button>
+  <button id="stop" disabled>スキャン停止</button>
+  <button id="view">保存データを見る</button>
+  <button id="guide">案内開始</button>
+
+  <p id="rssi">RSSI: 未取得</p>
   <p id="avg">平均RSSI: 未取得</p>
+  <p id="compare">ルート案内: 未取得</p>
+
+  <div id="savedData" style="margin-top:20px; white-space: pre-wrap;"></div>
 
   <script>
     const rssiArray = [];
+    const temp = [];
+    const averageArray = [];
     const maxSamples = 10;
-
-    document.getElementById('scan').addEventListener('click', async () => {
+    let scan;
+    let advertisementHandler;
+  
+    const scanButton = document.getElementById('scan');
+    const stopButton = document.getElementById('stop');
+    const viewButton = document.getElementById('view');
+    const guideButton = document.getElementById('guide');
+  
+    function calculateAverage(arr) {
+      const avg = arr.reduce((sum, val) => sum + val, 0) / arr.length;
+      return avg;
+    }
+  
+    function updateRouteGuidance(average) {
+      const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
+      if (!routeData || !routeData.route || routeData.route.length === 0) return;
+  
+      const route = routeData.route.map(Number);
+      let closestIndex = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < route.length; i++) {
+        const diff = Math.abs(average - route[i]);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIndex = i;
+        }
+      }
+  
+      const percent = ((closestIndex + 1) / route.length * 100).toFixed(0);
+      const nextHint = (closestIndex < route.length - 1)
+        ? (average < route[closestIndex + 1] ? '近づく方向' : '遠ざかる方向')
+        : 'ルートの終点です';
+  
+      document.getElementById('compare').innerText =
+        `📍 現在位置はルートの ${percent}% あたり\n` +
+        `👉 次のRSSI目標: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
+    }
+  
+    function saveData() {
+      const saveData = {
+        timestamp: new Date().toISOString(),
+        averageRSSISequence: averageArray,
+      };
+  
+      localStorage.setItem('rssiData', JSON.stringify(temp));
+      localStorage.setItem('rssiDataAve', JSON.stringify(saveData));
+  
+      if (averageArray.length > 0) {
+        const route = {
+          timestamp: new Date().toISOString(),
+          route: averageArray.map(Number)
+        };
+        localStorage.setItem('rssiRoute', JSON.stringify(route));
+        alert('スキャン停止・データ保存・ルート保存が完了しました');
+      } else {
+        alert('スキャン停止・データ保存しました（ルートは空です）');
+      }
+    }
+  
+    scanButton.addEventListener('click', async () => {
       try {
         const options = {
-          // acceptAllAdvertisements: true,
           filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
+          // acceptAllAdvertisements: true,
           keepRepeatedDevices: true
         };
-
-        const scan = await navigator.bluetooth.requestLEScan(options);
-
-        navigator.bluetooth.addEventListener('advertisementreceived', event => {
-          if (event.rssi !== undefined) {
-            if (event.rssi < 0) {
-
-              rssiArray.push(event.rssi);
-
-              if (rssiArray.length > maxSamples) {
-                rssiArray.shift();
-              }
-
-              document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
-
-              const avg = rssiArray.reduce((sum, val) => sum + val, 0) / rssiArray.length;
+  
+        scan = await navigator.bluetooth.requestLEScan(options);
+  
+        advertisementHandler = (event) => {
+          if (event.rssi !== undefined && event.rssi < 0) {
+            temp.push(event.rssi);
+            rssiArray.push(event.rssi);
+            document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+  
+            if (rssiArray.length % maxSamples === 0) {
+              const recent = rssiArray.slice(-maxSamples);
+              const avg = calculateAverage(recent);
+              averageArray.push(avg.toFixed(2));
               document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
-
+  
+              updateRouteGuidance(avg);
             }
           }
-        });
-
+        };
+  
+        navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+        scanButton.disabled = true;
+        stopButton.disabled = false;
+  
       } catch (err) {
         alert('スキャンエラー: ' + err);
       }
     });
-  </script>
+  
+    stopButton.addEventListener('click', () => {
+      if (scan?.active) scan.stop();
+      if (advertisementHandler) {
+        navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
+      }
+  
+      saveData();
+      scanButton.disabled = false;
+      stopButton.disabled = true;
+    });
+  
+    viewButton.addEventListener('click', () => {
+      const rssi = localStorage.getItem('rssiData');
+      const saved = localStorage.getItem('rssiDataAve');
+      const output = document.getElementById('savedData');
+  
+      if (saved && rssi) {
+        const data = JSON.parse(saved);
+        const rssiData = JSON.parse(rssi);
+        output.innerText =
+          `保存日時: ${data.timestamp}\n` +
+          `RSSI (${rssiData.length}件):\n${rssiData.join(', ')}\n\n` +
+          `平均RSSIシーケンス (${data.averageRSSISequence.length}件):\n${data.averageRSSISequence.join(', ')}`;
+      } else {
+        output.innerText = '保存されたRSSIデータはありません。';
+      }
+    });
+  
+    guideButton.addEventListener('click', () => {
+      const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
+      if (!routeData?.route?.length) {
+        alert('案内に使えるルートデータがありません');
+        return;
+      }
+  
+      const recent = rssiArray.slice(-maxSamples);
+      if (recent.length < maxSamples) {
+        alert('案内には少なくとも10件のRSSIデータが必要です');
+        return;
+      }
+  
+      const avg = calculateAverage(recent);
+      updateRouteGuidance(avg);
+      alert('案内を更新しました');
+    });
+  </script>  
 </body>
 </html>
