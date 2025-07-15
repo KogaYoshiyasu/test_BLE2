@@ -165,12 +165,16 @@
         alert('案内に使えるルートデータがありません');
         return;
       }
+
+      document.getElementById('avg').innerText = `1`;
   
       const recent = rssiArray.slice(-maxSamples);
       if (recent.length < maxSamples) {
         alert('案内には少なくとも10件のRSSIデータが必要です');
         return;
       }
+
+      document.getElementById('avg').innerText = `2`;
       
       try{
         const options = {
@@ -181,7 +185,12 @@
 
         scan = await navigator.bluetooth.requestLEScan(options);
       
+        document.getElementById('avg').innerText = `3`;
+
         guideArray = [];
+
+        document.getElementById('avg').innerText = `3`;
+
 
         advertisementHandler = (event) => {
           if (event.rssi !== undefined && event.rssi < 0) {
