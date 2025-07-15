@@ -25,7 +25,6 @@
     const rssiArray = [];
     //const temp = [];
     const averageArray = [];
-    //let guideArray = [];
     const maxSamples = 10;
     let scan;
     let advertisementHandler;
@@ -120,6 +119,10 @@
 
         scanButton.disabled = true;
         stopButton.disabled = false;
+        viewButton.disabled = true;
+        guideButton.disabled = true;
+        guideStopButton.disabled = true;
+        deleteButton.disabled = true;
   
       } catch (err) {
         alert('スキャンエラー: ' + err);
@@ -138,6 +141,7 @@
       stopButton.disabled = true;
       viewButton.disabled = false;
       guideButton.disabled = false;
+      guideStopButton.disabled = true;
       deleteButton.disabled = false;
 
     });
@@ -165,16 +169,12 @@
         alert('案内に使えるルートデータがありません');
         return;
       }
-
-      document.getElementById('avg').innerText = `1`;
   
       const recent = rssiArray.slice(-maxSamples);
       if (recent.length < maxSamples) {
         alert('案内には少なくとも10件のRSSIデータが必要です');
         return;
       }
-
-      document.getElementById('avg').innerText = `2`;
       
       try{
         const options = {
@@ -185,12 +185,7 @@
 
         scan = await navigator.bluetooth.requestLEScan(options);
       
-        document.getElementById('avg').innerText = `3`;
-
         let guideArray = [];
-
-        document.getElementById('avg').innerText = `4`;
-
 
         advertisementHandler = (event) => {
           if (event.rssi !== undefined && event.rssi < 0) {
@@ -218,12 +213,12 @@
       //updateRouteGuidance(avg, routeData);
       //alert('案内を更新しました');
 
-      guideStopButton.disabled = false;
-      guideButton.disabled = true;
       scanButton.disabled = true;
       stopButton.disabled = true;
       viewButton.disabled = true;
       deleteButton.disabled = true;
+      guideButton.disabled = true;
+      guideStopButton.disabled = false;
 
     });
 
@@ -233,17 +228,26 @@
         navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
       }
 
-      guideStopButton.disabled = true;
-      guideButton.disabled = false;
       scanButton.disabled = false;
       stopButton.disabled = false;
       viewButton.disabled = false;
       deleteButton.disabled = false;
+      guideButton.disabled = false;
+      guideStopButton.disabled = true;
 
     });
 
     deleteButton.addEventListener('click', () => {
       localStorage.clear();
+
+      scanButton.disabled = false;
+      stopButton.disabled = true;
+      viewButton.disabled = true;
+      deleteButton.disabled = true;
+      guideButton.disabled = true;
+      guideStopButton.disabled = true;
+
+      alert('ローカルストレージを削除しました');
     });
 
   </script>  
