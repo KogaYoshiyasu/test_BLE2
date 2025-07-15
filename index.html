@@ -25,7 +25,7 @@
     const rssiArray = [];
     //const temp = [];
     const averageArray = [];
-    let guideArray = [];
+    //let guideArray = [];
     const maxSamples = 10;
     let scan;
     let advertisementHandler;
@@ -177,17 +177,17 @@
       document.getElementById('avg').innerText = `2`;
       
       try{
-        const options2 = {
+        const options = {
           filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
           // acceptAllAdvertisements: true,
           keepRepeatedDevices: true
         };
 
-        scan = await navigator.bluetooth.requestLEScan(options2);
+        scan = await navigator.bluetooth.requestLEScan(options);
       
         document.getElementById('avg').innerText = `3`;
 
-        guideArray = [];
+        let guideArray = [];
 
         document.getElementById('avg').innerText = `4`;
 
