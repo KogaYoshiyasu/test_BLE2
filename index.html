@@ -177,13 +177,13 @@
       document.getElementById('avg').innerText = `2`;
       
       try{
-        const options = {
+        const options2 = {
           filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
           // acceptAllAdvertisements: true,
           keepRepeatedDevices: true
         };
 
-        scan = await navigator.bluetooth.requestLEScan(options);
+        scan = await navigator.bluetooth.requestLEScan(options2);
       
         document.getElementById('avg').innerText = `3`;
 
