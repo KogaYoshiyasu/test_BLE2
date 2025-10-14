@@ -14,6 +14,7 @@
   <button id="guideStop" disabled>案内停止</button>
   <button id="delete" disabled>データ削除</button>
 
+  <pre id="output"></pre>
 
   <p id="rssi">RSSI: 未取得</p>
   <p id="avg">平均RSSI: 未取得</p>
@@ -192,6 +193,7 @@
 
             // 最後のデータを案内ルートとして使う
             routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
+            document.getElementById("output").textContent = JSON.stringify(data, null, 2);
           })
           .catch(e => console.error("取得エラー:", e));
 
@@ -217,12 +219,12 @@
   
         navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
 
-      scanButton.disabled = true;
-      stopButton.disabled = true;
-      viewButton.disabled = true;
-      deleteButton.disabled = true;
-      guideButton.disabled = true;
-      guideStopButton.disabled = false;
+        scanButton.disabled = true;
+        stopButton.disabled = true;
+        viewButton.disabled = true;
+        deleteButton.disabled = true;
+        guideButton.disabled = true;
+        guideStopButton.disabled = false;
 
       } catch (err) {
         alert('案内開始エラー: ' + err);
