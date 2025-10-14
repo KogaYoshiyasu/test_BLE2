@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>BLE RSSI リアルタイム受信 & ルート案内５</title>
+  <title>BLE RSSI リアルタイム受信 & ルート案内</title>
 </head>
 <body>
   <h1>BLE RSSI スキャン & ルート案内</h1>
@@ -96,21 +96,12 @@
     }
 
   //サーバにデータを送信に変更
-    function saveData(rssiArray) {
-  
-      //localStorage.setItem('rssiData', JSON.stringify(rssiArray));
-  
+    function saveData() {
       if (averageArray.length > 0) {
-        /*const route = {
-          timestamp: new Date().toISOString(),
-          route: averageArray.map(Number)
-        };
-        localStorage.setItem('rssiRoute', JSON.stringify(route));*/
-
         fetch("https://localhost:3001/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({  /*time: new Date().toISOString(),*/ value: averageArray.map(Number) }),
+          body: JSON.stringify({ value: averageArray.map(Number) }),
         })
         .then(r => r.json())
         .then(d => console.log("サーバー応答:", d))
@@ -126,8 +117,8 @@
       try {
         scan = await startBluetoothScan();
   
-        rssiArray = []
-        averageArray = []
+        rssiArray = [];
+        averageArray = [];
 
         advertisementHandler = createAdvertisementHandler(rssiArray, (avg) => {
           averageArray.push(avg.toFixed(2));
@@ -153,7 +144,7 @@
         navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
       }
   
-      saveData(rssiArray);
+      saveData();
 
       scanButton.disabled = false;
       stopButton.disabled = true;
@@ -164,27 +155,25 @@
 
     });
   
-    /*viewButton.addEventListener('click', () => {
-      const rssi = localStorage.getItem('rssiData');
-      const routeData = localStorage.getItem('rssiRoute');
-      const output = document.getElementById('savedData');
+    viewButton.addEventListener('click', () => {
+      fetch("https://localhost:3001/data")
+        .then(r => r.json())
+        .then(data => {
+          console.log("取得データ:", data);
+
+          // 最後のデータを案内ルートとして使う
+          routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
+          document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(e => console.error("取得エラー:", e));
   
-      if (routeData && rssi) {
-        const data = JSON.parse(routeData);
-        const rssiData = JSON.parse(rssi);
-        output.innerText =
-          `保存日時: ${data.timestamp}\n` +
-          `RSSI (${rssiData.length}件):\n${rssiData.join(', ')}\n\n` +
-          `平均RSSI (${data.route.length}件):\n${data.route.join(', ')}`;
-      } else {
+      if (!routeData) {
         output.innerText = '保存されたRSSIデータはありません。';
       }
-    });*/
+    });
   
     //サーバからデータを取得に変更
     guideButton.addEventListener('click', async () => {
-      //const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
-      
       try{
         fetch("https://localhost:3001/data")
           .then(r => r.json())
@@ -269,4 +258,3 @@
   </script>  
 </body>
 </html>
-
