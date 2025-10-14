@@ -22,10 +22,9 @@
   <div id="savedData" style="margin-top:20px; white-space: pre-wrap;"></div>
 
   <script>
-    const rssiArray = [];
-    //const temp = [];
-    const averageArray = [];
     const maxSamples = 10;
+    let rssiArray = [];
+    let averageArray = [];
     let scan;
     let advertisementHandler;
   
@@ -36,14 +35,13 @@
     const guideStopButton = document.getElementById('guideStop');
     const deleteButton = document.getElementById('delete');
 
-  
-    function calculateAverage(arr) {
-      const avg = arr.reduce((sum, val) => sum + val, 0) / arr.length;
-      return avg;
+    function calculateAverage(array) {
+      const average = array.reduce((sum, val) => sum + val, 0) / array.length;
+      return average;
     }
   
-    function updateRouteGuidance(average, routeData) {
-      if (!routeData || !routeData.route || routeData.route.length === 0) return;
+    function updateRouteGuide(average, routeData) {
+      if (!routeData?.route?.length) return;
   
       const route = routeData.route.map(Number);
 
@@ -59,29 +57,63 @@
   
       const percent = ((closestIndex + 1) / route.length * 100).toFixed(0);
       const nextHint = (closestIndex < route.length - 1)
-        ? (average < route[closestIndex + 1] ? '近づく方向' : '遠ざかる方向')
+        ? (average < route[closestIndex + 1] ? '近づいています' : '遠ざかっています')
         : 'ルートの終点です';
   
       document.getElementById('compare').innerText =
-        `現在位置はルートの ${percent}% あたり\n` +
-        `次のRSSI目標: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
+        `現在位置はルートの ${percent}% \n` +
+        `次のRSSI: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
     }
+
+    function createAdvertisementHandler(targetArray, onAverageReady) {
+      return (event) => {
+        if (event.rssi !== undefined && event.rssi < 0) {
+          targetArray.push(event.rssi);
+          document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+
+          if (targetArray.length % maxSamples === 0) {
+            const recent = targetArray.slice(-maxSamples);
+            const avg = calculateAverage(recent);
+            document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+
+            if (onAverageReady) {
+              onAverageReady(avg);
+            }
+          }
+        }
+      };
+    }
+
+    async function startBluetoothScan() {
+      const options = {
+        filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
+        // acceptAllAdvertisements: true,
+        keepRepeatedDevices: true
+      };
+      return await navigator.bluetooth.requestLEScan(options);
+    }
+
+  //サーバにデータを送信に変更
+    function saveData(rssiArray) {
   
-    function saveData() {
-      /*const saveData = {
-        timestamp: new Date().toISOString(),
-        averageRSSISequence: averageArray,
-      };*/
-  
-      localStorage.setItem('rssiData', JSON.stringify(rssiArray));
-      //localStorage.setItem('rssiDataAve', JSON.stringify(saveData));
+      //localStorage.setItem('rssiData', JSON.stringify(rssiArray));
   
       if (averageArray.length > 0) {
-        const route = {
+        /*const route = {
           timestamp: new Date().toISOString(),
           route: averageArray.map(Number)
         };
-        localStorage.setItem('rssiRoute', JSON.stringify(route));
+        localStorage.setItem('rssiRoute', JSON.stringify(route));*/
+
+        fetch("https://localhost:3001/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({  /*time: new Date().toISOString(),*/ value: averageArray.map(Number) }),
+        })
+        .then(r => r.json())
+        .then(d => console.log("サーバー応答:", d))
+        .catch(e => console.error("送信エラー:", e));
+
         alert('スキャン停止・データ保存・ルート保存が完了しました');
       } else {
         alert('スキャン停止・データ保存しました（ルートは空です）');
@@ -90,30 +122,13 @@
   
     scanButton.addEventListener('click', async () => {
       try {
-        const options = {
-          filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
-          // acceptAllAdvertisements: true,
-          keepRepeatedDevices: true
-        };
+        scan = await startBluetoothScan();
   
-        scan = await navigator.bluetooth.requestLEScan(options);
-  
-        advertisementHandler = (event) => {
-          if (event.rssi !== undefined && event.rssi < 0) {
-            //temp.push(event.rssi);
-            rssiArray.push(event.rssi);
-            document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
-  
-            if (rssiArray.length % maxSamples === 0) {
-              const recent = rssiArray.slice(-maxSamples);
-              const avg = calculateAverage(recent);
-              averageArray.push(avg.toFixed(2));
-              document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
-  
-              //updateRouteGuidance(avg);
-            }
-          }
-        };
+        rssiArray = []
+
+        advertisementHandler = createAdvertisementHandler(rssiArray, (avg) => {
+          averageArray.push(avg.toFixed(2));
+        });
   
         navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
 
@@ -135,7 +150,7 @@
         navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
       }
   
-      saveData();
+      saveData(rssiArray);
 
       scanButton.disabled = false;
       stopButton.disabled = true;
@@ -146,72 +161,56 @@
 
     });
   
-    viewButton.addEventListener('click', () => {
+    /*viewButton.addEventListener('click', () => {
       const rssi = localStorage.getItem('rssiData');
-      const saved = localStorage.getItem('rssiDataAve');
+      const routeData = localStorage.getItem('rssiRoute');
       const output = document.getElementById('savedData');
   
-      if (saved && rssi) {
-        const data = JSON.parse(saved);
+      if (routeData && rssi) {
+        const data = JSON.parse(routeData);
         const rssiData = JSON.parse(rssi);
         output.innerText =
           `保存日時: ${data.timestamp}\n` +
           `RSSI (${rssiData.length}件):\n${rssiData.join(', ')}\n\n` +
-          `平均RSSIシーケンス (${data.averageRSSISequence.length}件):\n${data.averageRSSISequence.join(', ')}`;
+          `平均RSSI (${data.route.length}件):\n${data.route.join(', ')}`;
       } else {
         output.innerText = '保存されたRSSIデータはありません。';
       }
-    });
+    });*/
   
+    //サーバからデータを取得に変更
     guideButton.addEventListener('click', async () => {
-      const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
-      if (!routeData?.route?.length) {
-        alert('案内に使えるルートデータがありません');
-        return;
-      }
-  
-      const recent = rssiArray.slice(-maxSamples);
-      if (recent.length < maxSamples) {
-        alert('案内には少なくとも10件のRSSIデータが必要です');
-        return;
-      }
+      //const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
       
       try{
-        const options = {
-          filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }],
-          // acceptAllAdvertisements: true,
-          keepRepeatedDevices: true
-        };
+        const res = await fetch("https://localhost:3001/data");
+        const data = await res.json();
+        console.log("取得データ:", data);
 
-        scan = await navigator.bluetooth.requestLEScan(options);
+        // 最後のデータを案内ルートとして使う
+        const routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
+
+        if (!routeData?.route?.length) {
+          alert('案内に使えるルートデータがありません');
+          return;
+        }
+
+        const recent = rssiArray.slice(-maxSamples);
+        if (recent.length < maxSamples) {
+          alert('案内には少なくとも10件のRSSIデータが必要です');
+          return;
+        }
+        
+        //RSSIスキャンを再開して現在位置を案内
+        scan = await startBluetoothScan();
       
         let guideArray = [];
 
-        advertisementHandler = (event) => {
-          if (event.rssi !== undefined && event.rssi < 0) {
-            guideArray.push(event.rssi);
-            document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
-  
-            if (guideArray.length % maxSamples === 0) {
-              const recent = guideArray.slice(-maxSamples);
-              const avg = calculateAverage(recent);
-              //averageArray.push(avg.toFixed(2));
-              document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
-  
-              updateRouteGuidance(avg, routeData);
-            }
-          }
-        };
+        advertisementHandler = createAdvertisementHandler(guideArray, (avg) => {
+          updateRouteGuide(avg, routeData);
+        });
   
         navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
-
-      } catch (err) {
-        alert('スキャンエラー: ' + err);
-      }
-
-      //const avg = calculateAverage(recent);
-      //updateRouteGuidance(avg, routeData);
-      //alert('案内を更新しました');
 
       scanButton.disabled = true;
       stopButton.disabled = true;
@@ -219,6 +218,10 @@
       deleteButton.disabled = true;
       guideButton.disabled = true;
       guideStopButton.disabled = false;
+
+      } catch (err) {
+        alert('案内開始エラー: ' + err);
+      }
 
     });
 
@@ -237,8 +240,14 @@
 
     });
 
+    //サーバのデータを削除に変更
     deleteButton.addEventListener('click', () => {
-      localStorage.clear();
+      //localStorage.clear();
+
+      fetch("https://localhost:3001/data", { method: "DELETE" })
+        .then(r => r.json())
+        .then(d => console.log("削除結果:", d))
+        .catch(e => console.error("削除エラー:", e));
 
       scanButton.disabled = false;
       stopButton.disabled = true;
@@ -247,7 +256,7 @@
       guideButton.disabled = true;
       guideStopButton.disabled = true;
 
-      alert('ローカルストレージを削除しました');
+      alert('サーバーデータを削除しました');
     });
 
   </script>  
