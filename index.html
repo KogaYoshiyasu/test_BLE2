@@ -25,6 +25,7 @@
     const maxSamples = 10;
     let rssiArray = [];
     let averageArray = [];
+    let routeData = [];
     let scan;
     let advertisementHandler;
   
@@ -125,6 +126,7 @@
         scan = await startBluetoothScan();
   
         rssiArray = []
+        averageArray = []
 
         advertisementHandler = createAdvertisementHandler(rssiArray, (avg) => {
           averageArray.push(avg.toFixed(2));
@@ -183,12 +185,15 @@
       //const routeData = JSON.parse(localStorage.getItem('rssiRoute'));
       
       try{
-        const res = await fetch("https://localhost:3001/data");
-        const data = await res.json();
-        console.log("取得データ:", data);
+        fetch("https://localhost:3001/data")
+          .then(r => r.json())
+          .then(data => {
+            console.log("取得データ:", data);
 
-        // 最後のデータを案内ルートとして使う
-        const routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
+            // 最後のデータを案内ルートとして使う
+            routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
+          })
+          .catch(e => console.error("取得エラー:", e));
 
         if (!routeData?.route?.length) {
           alert('案内に使えるルートデータがありません');
@@ -200,7 +205,7 @@
           alert('案内には少なくとも10件のRSSIデータが必要です');
           return;
         }
-        
+
         //RSSIスキャンを再開して現在位置を案内
         scan = await startBluetoothScan();
       
