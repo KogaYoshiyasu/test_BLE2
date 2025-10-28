@@ -117,7 +117,7 @@
       if (averageArray.length === 0) return;
 
       try {
-        const res = await fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/save", {
+        const res = await fetch("/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: averageArray.map(Number) }),
@@ -175,7 +175,7 @@
     });
   
     viewButton.addEventListener('click', () => {
-      fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data")
+      fetch("/data")
         .then(r => r.json())
         .then(data => {
           console.log("取得データ:", data);
@@ -194,7 +194,7 @@
     //サーバからデータを取得に変更
     guideButton.addEventListener('click', async () => {
       try{
-        fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data")
+        fetch("/data")
           .then(r => r.json())
           .then(data => {
             console.log("取得データ:", data);
@@ -259,7 +259,7 @@
     deleteButton.addEventListener('click', () => {
       //localStorage.clear();
 
-      fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data", { method: "DELETE" })
+      fetch("/data", { method: "DELETE" })
         .then(r => r.json())
         .then(d => console.log("削除結果:", d))
         .catch(e => console.error("削除エラー:", e));
