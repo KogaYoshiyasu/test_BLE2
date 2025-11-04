@@ -175,7 +175,7 @@
     });
   
     viewButton.addEventListener('click', () => {
-      fetch("https://172.20.10.2:3001/data")
+      fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data")
         .then(r => r.json())
         .then(data => {
           console.log("取得データ:", data);
@@ -194,7 +194,7 @@
     //サーバからデータを取得に変更
     guideButton.addEventListener('click', async () => {
       try{
-        fetch("https://172.20.10.2:3001/data")
+        fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data")
           .then(r => r.json())
           .then(data => {
             console.log("取得データ:", data);
@@ -259,7 +259,7 @@
     deleteButton.addEventListener('click', () => {
       //localStorage.clear();
 
-      fetch("https://172.20.10.2:3001/data", { method: "DELETE" })
+      fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/data", { method: "DELETE" })
         .then(r => r.json())
         .then(d => console.log("削除結果:", d))
         .catch(e => console.error("削除エラー:", e));
