@@ -117,7 +117,7 @@
       if (averageArray.length === 0) return;
 
       try {
-        const res = await fetch("https://172.20.10.2:3001/save", {
+        const res = await fetch("https://excepable-jazmine-counteractingly.ngrok-free.dev/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: averageArray.map(Number) }),
