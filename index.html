@@ -46,29 +46,48 @@
 document.getElementById("load").onclick = () => {
   console.log("loadボタン押された");
 
-  const url = "https://excepable-jazmine-counteractingly.ngrok-free.dev/data"; 
+  // 【重要】ご自身の ngrok URL に置き換えてください
+  const NGROK_URL = "https://excepable-jazmine-counteractingly.ngrok-free.dev"; 
+  const url = NGROK_URL + "/read";
   
   fetch(url)
     .then(response => {
       console.log("レスポンスステータス:", response.status);
       console.log("Content-Type:", response.headers.get("content-type"));
       
-      // ステータスコードが200番台以外ならエラーをthrow
-      if (!response.ok) {
-        throw new Error(`HTTPエラー! ステータス: ${response.status} (${response.statusText})`);
-      }
-      
-      // JSONとしてパース
-      return response.json();
+      // 成功ステータスでなくても、レスポンスボディ全体をテキストとして取得
+      return response.text();
     })
-    .then(data => {
-      console.log("JSONパース成功、取得データ:", data);
-      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    .then(text => {
+      console.log("レスポンステキスト:", text);
+
+      // JSONパースを試みる
+      try {
+        const data = JSON.parse(text);
+        console.log("JSONパース成功、取得データ:", data);
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        // パースが失敗した場合（HTMLが返された場合など）
+        
+        // エラー内容を画面に出力
+        let errorMessage = "データの取得に失敗しました: 無効なデータ形式";
+        if (text.trim().startsWith("<!DOCTYPE html>")) {
+             // <!DOCTYPE html> で始まる場合は、ngrokまたはEdgeのキャッシュエラーで確定
+             errorMessage = "取得エラー: ブラウザが過去のエラーHTMLを返しました。\n\n" + 
+                            "これはブラウザのセキュリティキャッシュが原因です。\n" +
+                            "再起動/ブラウザデータ削除を試みてください。";
+        } else if (text.trim() === "") {
+             // 空文字列の場合
+             errorMessage = "取得エラー: サーバーから空のレスポンスが返されました。";
+        }
+        
+        document.getElementById("output").textContent = errorMessage;
+        console.error("JSONパース失敗:", e);
+      }
     })
     .catch(err => {
-      console.error("取得エラー:", err);
-      // エラーメッセージを画面に出力
-      document.getElementById("output").textContent = `データの取得に失敗しました: ${err.message}`;
+      console.error("fetchエラー:", err);
+      document.getElementById("output").textContent = `通信エラー: ${err.message}`;
     });
 };
 
