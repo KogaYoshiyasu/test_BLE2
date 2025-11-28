@@ -44,24 +44,35 @@
     }*/
 
 document.getElementById("load").onclick = () => {
-  const url = "https://excepable-jazmine-counteractingly.ngrok-free.dev/data"; // キャッシュ問題がなければシンプルに戻す
+  console.log("loadボタン押された");
+
+  // キャッシュを無効化するため、現在のタイムスタンプをクエリパラメータとしてURLに追加
+  // これにより、毎回異なるURLとして認識され、キャッシュが無視されます。
+  const cacheBusterUrl = "https://excepable-jazmine-counteractingly.ngrok-free.dev/data?t=" + new Date().getTime(); 
   
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        // ステータスコードが200番台以外ならエラーをthrow
-        throw new Error(`HTTP error! status: ${response.status} (${response.statusText})`);
+  // 修正後のURL (cacheBusterUrl) でfetchを実行
+  fetch(cacheBusterUrl)
+    .then(res => {
+      console.log("レスポンスステータス:", res.status);
+      // Content-Typeがtext/htmlであれば、ここで判別できます。
+      console.log("Content-Type:", res.headers.get("content-type"));
+      return res.text();
+    })
+    .then(text => {
+      console.log("レスポンステキスト:", text);
+      try {
+        const data = JSON.parse(text);
+        console.log("JSONパース成功:", data);
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        // SyntaxError: Unexpected token '<' など、HTMLが返された場合にここに到達します。
+        console.error("JSONパース失敗: サーバーはJSONではないデータを返しました。", e);
+        document.getElementById("output").textContent = 
+            `エラー: サーバーがHTML（または無効なデータ）を返しました。\n` +
+            `レスポンス開始部分: ${text.substring(0, 100)}...`;
       }
-      return response.json(); // 信頼してJSONとしてパースを試みる
     })
-    .then(data => {
-      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
-    })
-    .catch(err => {
-      console.error("取得エラー:", err);
-      // SyntaxError（HTMLが返された）の場合もここで捕捉
-      document.getElementById("output").textContent = `データの取得に失敗しました: ${err.message}`;
-    });
+    .catch(err => console.error("fetchエラー:", err));
 };
 
     /*document.getElementById("load").onclick = () => {
