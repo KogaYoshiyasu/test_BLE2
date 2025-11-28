@@ -46,7 +46,7 @@
 document.getElementById("load").onclick = () => {
   console.log("loadボタン押された");
 
-  // URLは固定と仮定（毎回同じドメイン）
+  // URLは固定のngrokドメイン
   const url = "https://excepable-jazmine-counteractingly.ngrok-free.dev/data"; 
   
   fetch(url)
@@ -54,24 +54,22 @@ document.getElementById("load").onclick = () => {
       console.log("レスポンスステータス:", response.status);
       console.log("Content-Type:", response.headers.get("content-type"));
       
-      // ステータスコードが200番台以外、またはContent-TypeがJSONでない場合はエラーを投げる
-      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-        // エラーレスポンスをテキストとして取得し、エラーメッセージに含める
-        return response.text().then(text => {
-            throw new Error(`サーバーエラー (Status: ${response.status})。Content-TypeがJSONではありませんでした。`);
-        });
+      // 1. ステータスコードのチェック
+      if (!response.ok) {
+        throw new Error(`HTTPエラー! ステータス: ${response.status} (${response.statusText})`);
       }
       
-      // 正常なJSONレスポンスをパース
+      // 2. JSONとしてパース (cURLの結果からこれが正しい処理であることが確認済み)
       return response.json();
     })
     .then(data => {
       console.log("JSONパース成功、取得データ:", data);
+      // データを整形して画面に出力
       document.getElementById("output").textContent = JSON.stringify(data, null, 2);
     })
     .catch(err => {
       console.error("取得エラー:", err);
-      // SyntaxErrorやカスタムエラーを捕捉
+      // エラーメッセージを画面に出力
       document.getElementById("output").textContent = `データの取得に失敗しました: ${err.message}`;
     });
 };
