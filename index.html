@@ -13,7 +13,7 @@
 
   <script>
     document.getElementById("send").onclick = () => {
-      fetch("https://thinkingly-straked-adele.ngrok-free.dev/save", {
+      fetch("https://http-server-4ea977018793.herokuapp.com/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ time: new Date().toISOString(), value: Math.random() }),
@@ -44,7 +44,7 @@
     }*/
 
     document.getElementById("load").onclick = () => {
-      fetch("https://thinkingly-straked-adele.ngrok-free.dev/data")
+      fetch("https://http-server-4ea977018793.herokuapp.com/data")
         .then(r => r.json())
         .then(data => {
           console.log("取得データ:", data);
@@ -54,7 +54,7 @@
     };
     
     document.getElementById("delete").onclick = () => {
-      fetch("https://thinkingly-straked-adele.ngrok-free.dev/data", { method: "DELETE" })
+      fetch("https://http-server-4ea977018793.herokuapp.com/data", { method: "DELETE" })
         .then(r => r.json())
         .then(d => console.log("削除結果:", d))
         .catch(e => console.error("削除エラー:", e));
