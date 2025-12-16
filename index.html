@@ -201,7 +201,7 @@
 
             // 最後のデータを案内ルートとして使う
             routeData = Array.isArray(data) ? { route: data[data.length - 1].value } : data;
-            document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+            //document.getElementById("output").textContent = JSON.stringify(data, null, 2);
           })
           .catch(e => console.error("取得エラー:", e));
 
