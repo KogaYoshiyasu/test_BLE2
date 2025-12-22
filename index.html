@@ -59,7 +59,7 @@
   <div class="status-box">
     <p id="rssi">RSSI: --</p>
     <p id="avg">平均RSSI: --</p>
-    <p id="compare">ルート進捗: 未開始</p>
+    <!-- <p id="compare">ルート進捗: 未開始</p> -->
   </div>
 
   <div class="card">
@@ -181,12 +181,12 @@
     }
 
     const percent = (closestIndex / (route.length - 1)).toFixed(3);
-    const nextHint = (closestIndex < route.length - 1)
-      ? (average < route[closestIndex + 1] ? '近づいています' : '遠ざかっています')
-      : 'ルートの終点です';
+    // const nextHint = (closestIndex < route.length - 1)
+    //   ? (average < route[closestIndex + 1] ? '近づいています' : '遠ざかっています')
+    //   : 'ルートの終点です';
 
-    document.getElementById('compare').innerText =
-      `次のRSSI: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
+    // document.getElementById('compare').innerText =
+    //   `次のRSSI: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
 
     document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
 
