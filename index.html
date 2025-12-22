@@ -1,122 +1,367 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>スマホ対応画像マーカー</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            margin: 0; 
-            padding: 15px; 
-            background-color: #f8f9fa;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .controls { 
-            width: 100%;
-            max-width: 500px;
-            margin-bottom: 15px; 
-            display: flex;
-            gap: 10px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLE RSSI & Image Route Sync</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; margin: 0; padding: 20px; }
+    .main-layout { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 800px; }
+    
+    .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    
+    /* 画像とピンのスタイル */
+    .image-container { position: relative; width: 100%; background: #ddd; border-radius: 8px; overflow: hidden; line-height: 0; cursor: crosshair; }
+    img { width: 100%; height: auto; display: block; }
+    img[src=""] { display: none; }
+    
+    .point { position: absolute; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; background: #007bff; pointer-events: none; }
+    .point.moving { background: #ff9500; width: 26px; height: 26px; z-index: 20; box-shadow: 0 0 12px rgba(255,149,0,0.9); }
 
-        /* 写真を表示するエリア（画面幅いっぱいに広がる） */
-        .image-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px; /* PCで見ても広がりすぎないように制限 */
-            background-color: #ddd;
-            line-height: 0;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
-            touch-action: manipulation; /* ダブルタップズームを防いで反応を良くする */
-        }
-
-        .image-container img {
-            width: 100%; /* 横幅を画面に合わせる */
-            height: auto; /* 縦横比を維持 */
-            display: block;
-        }
-
-        /* ピンの見た目（スマホでも見やすいサイズ） */
-        .point {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #ff3b30; /* iOS風の赤 */
-            border: 2px solid white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            pointer-events: none;
-        }
-
-        input[type="file"] { flex-grow: 1; }
-        button { padding: 8px 15px; cursor: pointer; }
-    </style>
+    /* ステータス表示 */
+    .status-box { background: #333; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+    .status-box p { margin: 5px 0; font-family: monospace; }
+    
+    /* 履歴リスト */
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+    button { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+    .btn-green { background: #28a745; } .btn-red { background: #dc3545; } .btn-blue { background: #007bff; } .btn-purple { background: #6f42c1; } .btn-gray { background: #6c757d; } .btn-orange { background: #fd7e14; }
+    button:disabled { background: #ccc; }
+  </style>
 </head>
 <body>
 
-    <div class="controls">
-        <input type="file" id="fileInput" accept="image/*">
-        <button onclick="clearPoints()">消去</button>
+<div class="main-layout">
+  <div class="card">
+    <strong>地図の写真の読み込み</strong>
+    <input type="file" id="fileInput" accept="image/*" style="margin-top:10px; display:block;">
+    
+    <div class="row">
+      <button id="scan" class="btn-green">スキャン開始</button>
+      <button id="stop" class="btn-red" disabled>停止・保存</button>
+      <button id="guide" class="btn-blue" disabled>案内開始</button>
+      <button id="guideStop" class="btn-red" disabled>案内停止</button>
+      <button id="undoBtn" class="btn-orange" onclick="undoLastPoint()">1つ戻る</button>
+      <button id="resetBtn" class="btn-gray" onclick="resetAll()">リセット</button>
     </div>
-
-    <div class="image-container" id="container">
-        <img id="displayImage" src="" alt="画像を選択してください">
+    <div class="row">
+      <strong>ルート進行度</strong>
+      <!-- <input type="range" id="range" min="0" max="1000" value="0" disabled style="flex-grow:1;"> -->
+      <span id="pVal" style="font-weight:bold; width:50px;">0.0%</span>
     </div>
+  </div>
 
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const displayImage = document.getElementById('displayImage');
-        const container = document.getElementById('container');
+  <div class="image-container" id="container">
+    <img id="img" src="">
+  </div>
 
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+  <div class="status-box">
+    <p id="rssi">RSSI: --</p>
+    <p id="avg">平均RSSI: --</p>
+    <p id="compare">ルート進捗: 未開始</p>
+  </div>
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                displayImage.src = event.target.result;
-                clearPoints();
-            }
-            reader.readAsDataURL(file);
-        });
+  <div class="card">
+    <strong>保存済みルート</strong>
+    <div id="historyList"></div>
+  </div>
+</div>
 
-        container.addEventListener('click', function(e) {
-            if (!displayImage.src || displayImage.getAttribute('src') === "") return;
+<script>
+  const BASE_URL = "https://test-server-757e.onrender.com";
+  const maxSamples = 10;
+  let points = []; // 画像上の座標リスト
+  let rssiArray = [];
+  let averageArray = [];
+  let routeData = []; 
+  let scan, advertisementHandler;
 
-            const rect = container.getBoundingClientRect();
-            
-            // クリック位置を計算
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+  const container = document.getElementById('container');
+  const img = document.getElementById('img');
 
-            // 重要：pxではなく「%」で位置を計算する
-            // これにより、スマホを横向きにしたり、画面サイズが変わってもピンがズレません
-            const xPercent = (x / rect.width) * 100;
-            const yPercent = (y / rect.height) * 100;
+  // --- 画像ルート操作 ---
+  document.getElementById('fileInput').onchange = (e) => {
+    resetCanvas();
+    const reader = new FileReader();
+    reader.onload = (ev) => { img.src = ev.target.result; };
+    reader.readAsDataURL(e.target.files[0]);
+  };
 
-            createPoint(xPercent, yPercent);
-        });
+  container.onclick = (e) => {
+    if (!img.src) return;
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * 100;
+    const y = (e.clientY - rect.top) / rect.height * 100;
+    points.push({x, y});
+    drawPointUI(x, y, points.length);
+  };
 
-        function createPoint(xPercent, yPercent) {
-            const point = document.createElement('div');
-            point.className = 'point';
-            point.style.left = xPercent + '%';
-            point.style.top = yPercent + '%';
-            container.appendChild(point);
+  function drawPointUI(x, y, label) {
+    const p = document.createElement('div');
+    p.className = 'point';
+    p.setAttribute('data-index', label);
+    p.style.left = x+'%'; p.style.top = y+'%'; p.innerText = label;
+    container.appendChild(p);
+  }
+
+  function undoLastPoint() {
+    if (points.length === 0) return;
+    const lastPin = container.querySelector(`.point[data-index="${points.length}"]`);
+    if (lastPin) lastPin.remove();
+    points.pop();
+  }
+
+  // 修正かも
+  function resetCanvas() {
+    points = [];
+    img.onload = null;
+    container.querySelectorAll('.point').forEach(p => p.remove());
+    const m = document.getElementById('mov');
+    if (m) m.remove();
+    document.getElementById('pVal').innerText = '0.0%';
+    document.getElementById('scan').disabled = false; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('guide').disabled = true; 
+    document.getElementById('guideStop').disabled = true;
+    document.getElementById('undoBtn').disabled = false; 
+    document.getElementById('resetBtn').disabled = false;
+  }
+
+  // --- スライダーとマーカーの連動 ---
+  // 修正（できたっぽい）
+  function updateMovingMarker(percent) {
+    let m = document.getElementById('mov');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'mov'; m.className = 'point moving';
+      container.appendChild(m);
+    }
+    if (points.length < 2) return;
+
+    const segs = points.length - 1;
+    const i = Math.min(Math.floor(percent * segs), segs - 1);
+    const p = (percent * segs) - i;
+    
+    const x = points[i].x + (points[i+1].x - points[i].x) * p;
+    const y = points[i].y + (points[i+1].y - points[i].y) * p;
+    
+    m.style.left = x + '%';
+    m.style.top = y + '%';
+  }
+
+  // --- BLEロジック ---
+  async function startScan() {
+    const options = { 
+      filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }], 
+      keepRepeatedDevices: true 
+    };
+    return await navigator.bluetooth.requestLEScan(options);
+  }
+
+  function calculateAverage(array) {
+    const average = array.reduce((sum, val) => sum + val, 0) / array.length;
+    return average;
+  }
+
+  // 修正（できたっぽい）
+  function updateRouteGuide(average, routeData) {
+    if (!routeData) return;
+
+    const route = routeData;
+
+    let closestIndex = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < route.length; i++) {
+      const diff = Math.abs(average - route[i]);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+
+    const percent = (closestIndex / (route.length - 1)).toFixed(3);
+    const nextHint = (closestIndex < route.length - 1)
+      ? (average < route[closestIndex + 1] ? '近づいています' : '遠ざかっています')
+      : 'ルートの終点です';
+
+    document.getElementById('compare').innerText =
+      `次のRSSI: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
+
+    document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
+
+    updateMovingMarker(percent)
+  }
+
+  function createAdvertisementHandler(targetArray, onAverageReady) {
+    return (event) => {
+      if (event.rssi !== undefined && event.rssi < 0) {
+        targetArray.push(event.rssi);
+        document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+
+        if (targetArray.length % maxSamples === 0) {
+          const recent = targetArray.slice(-maxSamples);
+          const avg = calculateAverage(recent);
+          document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+
+          if (onAverageReady) {
+            onAverageReady(avg);
+          }
         }
+      }
+    };
+  }
 
-        function clearPoints() {
-            const points = container.querySelectorAll('.point');
-            points.forEach(p => p.remove());
-        }
-    </script>
+  document.getElementById('scan').onclick = async () => {
+    if (points.length < 2){
+      alert("ポイントを二つ以上置いてください");
+      return;
+    }
+    scan = await startScan();
+    rssiArray = []; 
+    averageArray = [];
 
+    advertisementHandler = createAdvertisementHandler(rssiArray, (avg) => {
+      averageArray.push(avg.toFixed(2));
+    });
+
+    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = false;    
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = true;
+  };
+
+  document.getElementById('stop').onclick = async () => {
+    if (scan?.active) scan.stop();
+    if (advertisementHandler) {
+      navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
+    }
+
+    // 修正
+    // サーバー保存
+    const fileInput = document.getElementById('fileInput');
+    const fd = new FormData();
+    if (fileInput.files[0]) fd.append('image_file', fileInput.files[0]);
+    fd.append('points_data', JSON.stringify(points));
+    fd.append('route_data', JSON.stringify(averageArray));
+
+    try {
+      const res = await fetch(`${BASE_URL}/save`, { method: 'POST', body: fd });
+      if(res.ok) {
+        alert("保存しました");
+        loadHistory();
+      }
+    } catch (e) { 
+      alert("送信エラー"); 
+    }
+
+    document.getElementById('scan').disabled = false; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('undoBtn').disabled = false; 
+    document.getElementById('resetBtn').disabled = false;
+  };
+
+  // --- 案内ロジック (画像と連動) ---
+  document.getElementById('guide').onclick = async () => {
+    if (!routeData || points.length < 2) { 
+      alert("ルート地点とRSSIデータが必要です"); 
+      return; 
+    }
+
+    scan = await startScan();
+
+    let guideArray = [];
+    
+    advertisementHandler = createAdvertisementHandler(guideArray, (avg) => {
+      updateRouteGuide(avg, routeData);
+    });
+
+    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+
+    document.getElementById('guide').disabled = true; 
+    document.getElementById('guideStop').disabled = false;
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = true;    
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = true;
+  };
+
+  document.getElementById('guideStop').onclick = () => {
+    if (scan?.active) scan.stop();
+    if (advertisementHandler) {
+      navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
+    }
+
+    document.getElementById('guide').disabled = false; 
+    document.getElementById('guideStop').disabled = true;
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = false;
+  };
+
+  // 修正
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${BASE_URL}/data`);
+      const data = await res.json();
+      const list = document.getElementById('historyList');
+      list.innerHTML = "";
+      data.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+        row.innerHTML = `
+          <span>${item.name} (${item.points.length}点)</span>
+          <div>
+            <button class="btn-purple load-btn">読込</button>
+            <button class="btn-red del-btn">削除</button>
+          </div>`
+
+        row.querySelector('.load-btn').onclick = () => applyHistory(item);
+        row.querySelector('.del-btn').onclick = () => deleteHistory(item.id);
+
+        list.appendChild(row);
+      });
+    } catch (e) { console.error("履歴取得失敗"); }
+  }
+
+  // 修正かも
+  function applyHistory(item) {
+    resetCanvas();
+    img.onload = () => {
+        points = item.points;
+        points.forEach((p, i) => drawPointUI(p.x, p.y, i + 1));
+        //confirmRoute();
+        routeData = item.route;
+        img.onload = null;
+    };
+    img.src = item.imageUrl;
+
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('guide').disabled = false; 
+    document.getElementById('guideStop').disabled = true;
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = false;
+  }
+
+  async function deleteHistory(id) {
+    if (!confirm("削除しますか？")) return;
+    try {
+        const res = await fetch(`${BASE_URL}/history/${id}`, { method: 'DELETE' });
+        if (res.ok) loadHistory();
+    } catch (e) { alert("削除エラー"); }
+  }
+
+  function resetAll() { 
+    resetCanvas(); 
+    img.src = ""; 
+    document.getElementById('fileInput').value = ""; 
+  }
+
+  loadHistory();
+</script>
 </body>
 </html>
