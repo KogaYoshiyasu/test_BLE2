@@ -19,9 +19,9 @@
     .point { position: absolute; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; background: #007bff; pointer-events: none; }
     .point.moving { background: #ff9500; width: 26px; height: 26px; z-index: 20; box-shadow: 0 0 12px rgba(255,149,0,0.9); }
 
-    /* ステータス表示 */
+    /* ステータス表示
     .status-box { background: #333; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .status-box p { margin: 5px 0; font-family: monospace; }
+    .status-box p { margin: 5px 0; font-family: monospace; } */
     
     /* 履歴リスト */
     .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
@@ -49,6 +49,8 @@
       <strong>ルート進行度</strong>
       <!-- <input type="range" id="range" min="0" max="1000" value="0" disabled style="flex-grow:1;"> -->
       <span id="pVal" style="font-weight:bold; width:50px;">0.0%</span>
+      <span id="rssi" style="font-weight:bold; width:100px;">RSSI: --</span>
+      <span id="avg" style="font-weight:bold; width:100px;">平均RSSI: --</span>
     </div>
   </div>
 
@@ -56,11 +58,11 @@
     <img id="img" src="">
   </div>
 
-  <div class="status-box">
+  <!-- <div class="status-box">
     <p id="rssi">RSSI: --</p>
     <p id="avg">平均RSSI: --</p>
-    <!-- <p id="compare">ルート進捗: 未開始</p> -->
-  </div>
+    <p id="compare">ルート進捗: 未開始</p>
+  </div> -->
 
   <div class="card">
     <strong>保存済みルート</strong>
@@ -76,6 +78,7 @@
   let averageArray = [];
   let routeData = []; 
   let scan, advertisementHandler;
+  let isConfirmed = false;
 
   const container = document.getElementById('container');
   const img = document.getElementById('img');
@@ -89,7 +92,7 @@
   };
 
   container.onclick = (e) => {
-    if (!img.src) return;
+    if (!img.src || isConfirmed) return;
     const rect = container.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width * 100;
     const y = (e.clientY - rect.top) / rect.height * 100;
@@ -106,7 +109,7 @@
   }
 
   function undoLastPoint() {
-    if (points.length === 0) return;
+    if (isConfirmed || points.length === 0) return;
     const lastPin = container.querySelector(`.point[data-index="${points.length}"]`);
     if (lastPin) lastPin.remove();
     points.pop();
@@ -115,6 +118,7 @@
   // 修正かも
   function resetCanvas() {
     points = [];
+    isConfirmed = false;
     img.onload = null;
     container.querySelectorAll('.point').forEach(p => p.remove());
     const m = document.getElementById('mov');
@@ -217,6 +221,7 @@
       alert("ポイントを二つ以上置いてください");
       return;
     }
+    isConfirmed = true;
     scan = await startScan();
     rssiArray = []; 
     averageArray = [];
@@ -273,6 +278,7 @@
     scan = await startScan();
 
     let guideArray = [];
+    isConfirmed = true;
     
     advertisementHandler = createAdvertisementHandler(guideArray, (avg) => {
       updateRouteGuide(avg, routeData);
