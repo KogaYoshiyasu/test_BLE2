@@ -157,7 +157,8 @@
   // --- BLEロジック ---
   async function startScan() {
     const options = { 
-      filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] }], 
+      filters: [{ services: ['12345678-1234-5678-1234-56789abcdef0'] },
+                { services: ['12345678-1234-5678-1234-56789abcdef1'] }], 
       keepRepeatedDevices: true 
     };
     return await navigator.bluetooth.requestLEScan(options);
@@ -176,13 +177,25 @@
 
     let closestIndex = 0;
     let minDiff = Infinity;
-    for (let i = 0; i < route.length; i++) {
-      const diff = Math.abs(average - route[i]);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIndex = i;
+
+    // for (let i = 0; i < route.length; i++) {
+    //   const diff = Math.abs(average - route[i]);
+    //   if (diff < minDiff) {
+    //     minDiff = diff;
+    //     closestIndex = i;
+    //   }
+    // }
+
+    routeData.forEach((record, index) => {
+      const dist = Math.sqrt(
+        Math.pow(currentAvgs.a - record.a, 2) + 
+        Math.pow(currentAvgs.b - record.b, 2)
+      );
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIndex = index;
       }
-    }
+    });
 
     const percent = (closestIndex / (route.length - 1)).toFixed(3);
     // const nextHint = (closestIndex < route.length - 1)
@@ -197,21 +210,48 @@
     updateMovingMarker(percent)
   }
 
-  function createAdvertisementHandler(targetArray, onAverageReady) {
+  // function createAdvertisementHandler(targetArray, onAverageReady) {
+  //   return (event) => {
+  //     if (event.rssi !== undefined && event.rssi < 0) {
+  //       targetArray.push(event.rssi);
+  //       document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+
+  //       if (targetArray.length % maxSamples === 0) {
+  //         const recent = targetArray.slice(-maxSamples);
+  //         const avg = calculateAverage(recent);
+  //         document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+
+  //         if (onAverageReady) {
+  //           onAverageReady(avg);
+  //         }
+  //       }
+  //     }
+  //   };
+  // }
+
+  function createAdvertisementHandler(isTraining, callback) {
     return (event) => {
-      if (event.rssi !== undefined && event.rssi < 0) {
-        targetArray.push(event.rssi);
-        document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
+      const uuid = event.uuids[0];
+      const rssi = event.rssi;
+      if (rssi === undefined || rssi >= 0) return;
 
-        if (targetArray.length % maxSamples === 0) {
-          const recent = targetArray.slice(-maxSamples);
-          const avg = calculateAverage(recent);
-          document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+      const key = (uuid === BEACON_UUID_A) ? 'a' : 'b';
+      rssiHistory[key].push(rssi);
 
-          if (onAverageReady) {
-            onAverageReady(avg);
-          }
-        }
+      // 最新のRSSIを表示（UI更新）
+      if(key === 'a') document.getElementById('rssi').innerText = `A: ${rssi}`;
+      if(key === 'b') document.getElementById('avg').innerText = `B: ${rssi}`;
+
+      // 両方のビーコンのサンプルが溜まったら平均を計算
+      if (rssiHistory.a.length >= maxSamples && rssiHistory.b.length >= maxSamples) {
+        const avgA = calculateAverage(rssiHistory.a.slice(-maxSamples));
+        const avgB = calculateAverage(rssiHistory.b.slice(-maxSamples));
+        
+        // 配列をリセット（またはスライド）
+        rssiHistory.a = [];
+        rssiHistory.b = [];
+
+        callback({ a: avgA, b: avgB });
       }
     };
   }
@@ -221,8 +261,8 @@
       alert("ポイントを二つ以上置いてください");
       return;
     }
-    isConfirmed = true;
     scan = await startScan();
+    isConfirmed = true;
     rssiArray = []; 
     averageArray = [];
 
@@ -339,7 +379,6 @@
     img.onload = () => {
         points = item.points;
         points.forEach((p, i) => drawPointUI(p.x, p.y, i + 1));
-        //confirmRoute();
         routeData = item.route;
         img.onload = null;
     };
