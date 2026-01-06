@@ -1,0 +1,60 @@
+using System;
+using Windows.UI.Xaml.Controls;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.GenericAttributeProfile;
+
+namespace test_BLE
+{
+    public sealed partial class MainPage : Page
+    {
+        GattServiceProvider serviceProvider;
+
+        public MainPage()
+        {
+            this.InitializeComponent();
+            InitGattServer();
+        }
+
+        private async void InitGattServer()
+        {
+            // サービスUUIDを定義
+            var serviceUuid = Guid.Parse("12345678-1234-5678-1234-56789abcdef0");
+            var serviceResult = await GattServiceProvider.CreateAsync(serviceUuid);
+
+            if (serviceResult.Error != BluetoothError.Success)
+            {
+                System.Diagnostics.Debug.WriteLine("サービス作成失敗");
+                return;
+            }
+
+            serviceProvider = serviceResult.ServiceProvider;
+
+            // Characteristic作成（Notifyのみ）
+            var charUuid = Guid.Parse("abcdefab-1234-5678-1234-56789abcdef1");
+            var characteristicParams = new GattLocalCharacteristicParameters
+            {
+                CharacteristicProperties = GattCharacteristicProperties.Notify,
+                WriteProtectionLevel = GattProtectionLevel.Plain,
+                UserDescription = "RSSI-test"
+            };
+
+            var charResult = await serviceProvider.Service.CreateCharacteristicAsync(charUuid, characteristicParams);
+            if (charResult.Error != BluetoothError.Success)
+            {
+                System.Diagnostics.Debug.WriteLine("Characteristic作成失敗");
+                return;
+            }
+
+            // アドバタイズ開始
+            var advParams = new GattServiceProviderAdvertisingParameters
+            {
+                IsConnectable = true,
+                IsDiscoverable = true
+            };
+
+            serviceProvider.StartAdvertising(advParams);
+
+            System.Diagnostics.Debug.WriteLine("アドバタイズ開始");
+        }
+    }
+}
