@@ -73,15 +73,147 @@
 <script>
   const BASE_URL = "https://test-server-757e.onrender.com";
   const maxSamples = 10;
-  let points = []; // 画像上の座標リスト
-  let rssiArray = [];
-  let averageArray = [];
-  let routeData = []; 
+  
+  // ビーコン設定（実際のUUIDに書き換えてください）
+  const BEACON_UUID_A = '12345678-1234-5678-1234-56789abcdef0';
+  const BEACON_UUID_B = '12345678-1234-5678-1234-56789abcdef1';
+
+  let points = []; 
+  // ビーコンごとのデータを格納
+  let rssiHistory = { a: [], b: [] };
+  let routeData = []; // 保存形式: [{ a: -60, b: -80 }, ...]
+  
   let scan, advertisementHandler;
   let isConfirmed = false;
 
   const container = document.getElementById('container');
   const img = document.getElementById('img');
+
+  // --- BLEスキャン開始 ---
+  async function startScan() {
+    const options = { 
+      filters: [
+        { services: [BEACON_UUID_A] },
+        { services: [BEACON_UUID_B] }
+      ], 
+      keepRepeatedDevices: true 
+    };
+    return await navigator.bluetooth.requestLEScan(options);
+  }
+
+  // --- RSSIハンドラー ---
+  function createAdvertisementHandler(isTraining, callback) {
+    return (event) => {
+      const uuid = event.uuids[0];
+      const rssi = event.rssi;
+      if (rssi === undefined || rssi >= 0) return;
+
+      const key = (uuid === BEACON_UUID_A) ? 'a' : 'b';
+      rssiHistory[key].push(rssi);
+
+      // 最新のRSSIを表示（UI更新）
+      if(key === 'a') document.getElementById('rssi').innerText = `A: ${rssi}`;
+      if(key === 'b') document.getElementById('avg').innerText = `B: ${rssi}`;
+
+      // 両方のビーコンのサンプルが溜まったら平均を計算
+      if (rssiHistory.a.length >= maxSamples && rssiHistory.b.length >= maxSamples) {
+        const avgA = calculateAverage(rssiHistory.a.slice(-maxSamples));
+        const avgB = calculateAverage(rssiHistory.b.slice(-maxSamples));
+        
+        // 配列をリセット（またはスライド）
+        rssiHistory.a = [];
+        rssiHistory.b = [];
+
+        callback({ a: avgA, b: avgB });
+      }
+    };
+  }
+
+  function calculateAverage(array) {
+    return array.reduce((sum, val) => sum + val, 0) / array.length;
+  }
+
+  // --- 案内ロジック (2つのRSSIで比較) ---
+  function updateRouteGuide(currentAvgs, savedRoute) {
+    let closestIndex = 0;
+    let minDistance = Infinity;
+
+    // 数学的な距離（ユークリッド距離）で最も近い記録地点を探す
+    savedRoute.forEach((record, index) => {
+      const dist = Math.sqrt(
+        Math.pow(currentAvgs.a - record.a, 2) + 
+        Math.pow(currentAvgs.b - record.b, 2)
+      );
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIndex = index;
+      }
+    });
+
+    const percent = closestIndex / (savedRoute.length - 1);
+    document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
+    updateMovingMarker(percent);
+  }
+
+  // --- ボタンアクション ---
+  document.getElementById('scan').onclick = async () => {
+    if (points.length < 2) return alert("ポイントを配置してください");
+    
+    scan = await startScan();
+    isConfirmed = true;
+    const trainingData = [];
+
+    advertisementHandler = createAdvertisementHandler(true, (avgs) => {
+      trainingData.push(avgs); // {a: -60, b: -75} の形式で保存
+      console.log("Recorded:", avgs);
+    });
+
+    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+    
+    // UI制御
+    setButtonsState(true);
+    // 保存時に trainingData を routeData に代入する処理を stop 内に記述
+    window.currentTrainingData = trainingData;
+  };
+
+  document.getElementById('stop').onclick = async () => {
+    if (scan?.active) scan.stop();
+    navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
+
+    const fd = new FormData();
+    if (document.getElementById('fileInput').files[0]) {
+      fd.append('image_file', document.getElementById('fileInput').files[0]);
+    }
+    fd.append('points_data', JSON.stringify(points));
+    fd.append('route_data', JSON.stringify(window.currentTrainingData));
+
+    try {
+      const res = await fetch(`${BASE_URL}/upload`, { method: 'POST', body: fd });
+      if(res.ok) { alert("2つのビーコンデータで保存しました"); loadHistory(); }
+    } catch (e) { alert("送信エラー"); }
+    
+    setButtonsState(false);
+  };
+
+  document.getElementById('guide').onclick = async () => {
+    if (!routeData.length) return alert("ルートデータがありません");
+    scan = await startScan();
+    
+    advertisementHandler = createAdvertisementHandler(false, (avgs) => {
+      updateRouteGuide(avgs, routeData);
+    });
+
+    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+    document.getElementById('guide').disabled = true;
+    document.getElementById('guideStop').disabled = false;
+  };
+
+  function setButtonsState(isScanning) {
+    document.getElementById('scan').disabled = isScanning;
+    document.getElementById('stop').disabled = !isScanning;
+    document.getElementById('undoBtn').disabled = isScanning;
+    document.getElementById('resetBtn').disabled = isScanning;
+  }
 
   // --- 画像ルート操作 ---
   document.getElementById('fileInput').onchange = (e) => {
@@ -153,146 +285,6 @@
     m.style.left = x + '%';
     m.style.top = y + '%';
   }
-
-  // --- BLEロジック ---
-  async function startScan() {
-    const options = { 
-      filters: [{ services: ['12345678-1234-5678-1234-56789abcdef1'] }], 
-      keepRepeatedDevices: true 
-    };
-    return await navigator.bluetooth.requestLEScan(options);
-  }
-
-  function calculateAverage(array) {
-    const average = array.reduce((sum, val) => sum + val, 0) / array.length;
-    return average;
-  }
-
-  // 修正（できたっぽい）
-  function updateRouteGuide(average, routeData) {
-    if (!routeData) return;
-
-    const route = routeData;
-
-    let closestIndex = 0;
-    let minDiff = Infinity;
-    for (let i = 0; i < route.length; i++) {
-      const diff = Math.abs(average - route[i]);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIndex = i;
-      }
-    }
-
-    const percent = (closestIndex / (route.length - 1)).toFixed(3);
-    // const nextHint = (closestIndex < route.length - 1)
-    //   ? (average < route[closestIndex + 1] ? '近づいています' : '遠ざかっています')
-    //   : 'ルートの終点です';
-
-    // document.getElementById('compare').innerText =
-    //   `次のRSSI: ${route[closestIndex + 1] || 'なし'}（${nextHint}）`;
-
-    document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
-
-    updateMovingMarker(percent)
-  }
-
-  function createAdvertisementHandler(targetArray, onAverageReady) {
-    return (event) => {
-      if (event.rssi !== undefined && event.rssi < 0) {
-        targetArray.push(event.rssi);
-        document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
-
-        if (targetArray.length % maxSamples === 0) {
-          const recent = targetArray.slice(-maxSamples);
-          const avg = calculateAverage(recent);
-          document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
-
-          if (onAverageReady) {
-            onAverageReady(avg);
-          }
-        }
-      }
-    };
-  }
-
-  document.getElementById('scan').onclick = async () => {
-    if (points.length < 2){
-      alert("ポイントを二つ以上置いてください");
-      return;
-    }
-    scan = await startScan();
-    isConfirmed = true;
-    rssiArray = []; 
-    averageArray = [];
-
-    advertisementHandler = createAdvertisementHandler(rssiArray, (avg) => {
-      averageArray.push(avg.toFixed(2));
-    });
-
-    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
-
-    document.getElementById('scan').disabled = true; 
-    document.getElementById('stop').disabled = false;    
-    document.getElementById('undoBtn').disabled = true; 
-    document.getElementById('resetBtn').disabled = true;
-  };
-
-  document.getElementById('stop').onclick = async () => {
-    if (scan?.active) scan.stop();
-    if (advertisementHandler) {
-      navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
-    }
-
-    // 修正
-    // サーバー保存
-    const fileInput = document.getElementById('fileInput');
-    const fd = new FormData();
-    if (fileInput.files[0]) fd.append('image_file', fileInput.files[0]);
-    fd.append('points_data', JSON.stringify(points));
-    fd.append('route_data', JSON.stringify(averageArray));
-
-    try {
-      const res = await fetch(`${BASE_URL}/upload`, { method: 'POST', body: fd });
-      if(res.ok) {
-        alert("保存しました");
-        loadHistory();
-      }
-    } catch (e) { 
-      alert("送信エラー"); 
-    }
-
-    document.getElementById('scan').disabled = false; 
-    document.getElementById('stop').disabled = true;
-    document.getElementById('undoBtn').disabled = false; 
-    document.getElementById('resetBtn').disabled = false;
-  };
-
-  // --- 案内ロジック (画像と連動) ---
-  document.getElementById('guide').onclick = async () => {
-    if (!routeData || points.length < 2) { 
-      alert("ルート地点とRSSIデータが必要です"); 
-      return; 
-    }
-
-    scan = await startScan();
-
-    let guideArray = [];
-    isConfirmed = true;
-    
-    advertisementHandler = createAdvertisementHandler(guideArray, (avg) => {
-      updateRouteGuide(avg, routeData);
-    });
-
-    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
-
-    document.getElementById('guide').disabled = true; 
-    document.getElementById('guideStop').disabled = false;
-    document.getElementById('scan').disabled = true; 
-    document.getElementById('stop').disabled = true;    
-    document.getElementById('undoBtn').disabled = true; 
-    document.getElementById('resetBtn').disabled = true;
-  };
 
   document.getElementById('guideStop').onclick = () => {
     if (scan?.active) scan.stop();
