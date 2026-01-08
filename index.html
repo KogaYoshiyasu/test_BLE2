@@ -56,7 +56,7 @@
 
 <script>
   const BASE_URL = "https://test-server-757e.onrender.com";
-  const maxSamples = 5; // 平均化するサンプル数
+  const maxSamples = 10; // 平均化するサンプル数
   
   // ビーコンのUUID（環境に合わせて書き換えてください）
   const UUID_A = '12345678-1234-5678-1234-56789abcdef0'.toLowerCase();
@@ -214,43 +214,46 @@
     advertisementHandler = (e) => {
       handleAdvertisement(e, (currentAvgs) => {
         // 最も近い記録地点を検索（ユークリッド距離）
-        // let minDiff = Infinity;
-        // let closestIdx = 0;
+        let minDiff = Infinity;
+        let closestIdx = 0;
 
+        routeData.forEach((recorded, idx) => {
+          const diff = Math.sqrt(
+            Math.pow(currentAvgs.a - recorded.a, 2) + 
+            Math.pow(currentAvgs.b - recorded.b, 2)
+          );
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+
+        const percent = closestIdx / (routeData.length - 1);
+
+        // let closestIndexA = 0;
+        // let minDiffA = Infinity;
         // routeData.forEach((recorded, idx) => {
-        //   const diff = Math.sqrt(
-        //     Math.pow(currentAvgs.a - recorded.a, 2) + 
-        //     Math.pow(currentAvgs.b - recorded.b, 2)
-        //   );
-        //   if (diff < minDiff) {
-        //     minDiff = diff;
-        //     closestIdx = idx;
+        //     const diffA = Math.abs(currentAvgs.a - recorded.a);
+        //   if (diffA < minDiffA) {
+        //     minDiffA = diffA;
+        //     closestIndexA = idx;
         //   }
-        // });
+        // })
 
-        let closestIndexA = 0;
-        let minDiffA = Infinity;
-        routeData.forEach((recorded, idx) => {
-            const diffA = Math.abs(currentAvgs.a - recorded.a);
-          if (diffA < minDiffA) {
-            minDiffA = diffA;
-            closestIndexA = idx;
-          }
-        })
+        // let closestIndexB = 0;
+        // let minDiffB = Infinity;
+        // routeData.forEach((recorded, idx) => {
+        //     const diffB = Math.abs(currentAvgs.b - recorded.b);
+        //   if (diffB < minDiffB) {
+        //     minDiffB = diffB;
+        //     closestIndexB = idx;
+        //   }
+        // })
 
-        let closestIndexB = 0;
-        let minDiffB = Infinity;
-        routeData.forEach((recorded, idx) => {
-            const diffB = Math.abs(currentAvgs.b - recorded.b);
-          if (diffB < minDiffB) {
-            minDiffB = diffB;
-            closestIndexB = idx;
-          }
-        })
+        // const midIndex = (closestIndexA + closestIndexB) / 2
 
-        const midIndex = (closestIndexA + closestIndexB) / 2
-
-        const percent = midIndex / (routeData.length - 1);
+        // const percent = midIndex / (routeData.length - 1);
+        
         document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
         updateMovingMarker(percent);
       });
@@ -344,4 +347,3 @@
 </script>
 </body>
 </html>
-
