@@ -200,6 +200,7 @@
 
   function createAdvertisementHandler(targetArray, onAverageReady) {
     return (event) => {
+      document.getElementById('avg').innerText = `ここ${event.uuids}`;
       if (event.rssi !== undefined && event.rssi < 0) {
         targetArray.push(event.rssi);
         document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
@@ -207,7 +208,7 @@
         if (targetArray.length % maxSamples === 0) {
           const recent = targetArray.slice(-maxSamples);
           const avg = calculateAverage(recent);
-          document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
+          // document.getElementById('avg').innerText = `平均RSSI: ${avg.toFixed(2)}`;
 
           if (onAverageReady) {
             onAverageReady(avg);
