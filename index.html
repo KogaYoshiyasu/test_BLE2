@@ -156,8 +156,6 @@
     if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
       const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
       const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
-      tempRSSI.a = [];
-      tempRSSI.b = [];
       onPairReady({ a: avgA, b: avgB });
     }
   }
@@ -253,7 +251,7 @@
         // const midIndex = (closestIndexA + closestIndexB) / 2
 
         // const percent = midIndex / (routeData.length - 1);
-        
+
         document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
         updateMovingMarker(percent);
       });
