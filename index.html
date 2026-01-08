@@ -142,9 +142,9 @@
   function handleAdvertisement(event, onPairReady) {
     const uuid = event.uuids[0].toLowerCase();
     const rssi = event.rssi;
+    document.getElementById('rssiA').innerText = `ここ${rssi}`;
+    document.getElementById('rssiB').innerText = `ここ${event.device.id}`;
     if (!rssi || rssi >= 0) {
-      document.getElementById('rssiA').innerText = `ここ${rssi}`;
-      document.getElementById('rssiB').innerText = `ここ${event.device}`;
       return;
     }
 
