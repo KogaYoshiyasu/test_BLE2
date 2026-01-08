@@ -108,7 +108,14 @@
     isConfirmed = false;
     container.querySelectorAll('.point').forEach(p => p.remove());
     document.getElementById('pVal').innerText = '0.0%';
-    toggleButtons(false);
+    document.getElementById('rssiA').innerText = `A: --`;
+    document.getElementById('rssiB').innerText = `B: --`;
+    document.getElementById('scan').disabled = false; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('guide').disabled = true; 
+    document.getElementById('guideStop').disabled = true;
+    document.getElementById('undoBtn').disabled = false; 
+    document.getElementById('resetBtn').disabled = false;
   }
 
   function toggleButtons(isScanning) {
@@ -178,7 +185,10 @@
     };
 
     navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
-    toggleButtons(true);
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = false;    
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = true;
   };
 
   document.getElementById('stop').onclick = async () => {
@@ -196,7 +206,10 @@
       if(res.ok) { alert("保存完了"); loadHistory(); }
     } catch (e) { alert("保存エラー"); }
     
-    toggleButtons(false);
+    document.getElementById('scan').disabled = false; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('undoBtn').disabled = false; 
+    document.getElementById('resetBtn').disabled = false;
   };
 
   // --- 案内モード ---
@@ -229,15 +242,25 @@
     };
 
     navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
-    document.getElementById('guide').disabled = true;
+
+    document.getElementById('guide').disabled = true; 
     document.getElementById('guideStop').disabled = false;
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = true;    
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = true;
   };
 
   document.getElementById('guideStop').onclick = () => {
     if (scan?.active) scan.stop();
     navigator.bluetooth.removeEventListener('advertisementreceived', advertisementHandler);
-    document.getElementById('guide').disabled = false;
+
+    document.getElementById('guide').disabled = false; 
     document.getElementById('guideStop').disabled = true;
+    document.getElementById('scan').disabled = true; 
+    document.getElementById('stop').disabled = true;
+    document.getElementById('undoBtn').disabled = true; 
+    document.getElementById('resetBtn').disabled = false;
   };
 
   // --- UI・履歴管理 ---
@@ -277,6 +300,13 @@
             img.onload = null;
           };
           img.src = item.imageUrl;
+
+          document.getElementById('scan').disabled = true; 
+          document.getElementById('stop').disabled = true;
+          document.getElementById('guide').disabled = false; 
+          document.getElementById('guideStop').disabled = true;
+          document.getElementById('undoBtn').disabled = true; 
+          document.getElementById('resetBtn').disabled = false;
         };
         row.querySelector('.del-btn').onclick = async () => {
           if (confirm("削除しますか？")) {
