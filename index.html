@@ -156,6 +156,8 @@
     if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
       const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
       const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
+      tempRSSI.a = [];
+      tempRSSI.b = [];
       onPairReady({ a: avgA, b: avgB });
     }
   }
@@ -212,46 +214,46 @@
     advertisementHandler = (e) => {
       handleAdvertisement(e, (currentAvgs) => {
         // 最も近い記録地点を検索（ユークリッド距離）
-        let minDiff = Infinity;
-        let closestIdx = 0;
+        // let minDiff = Infinity;
+        // let closestIdx = 0;
 
+        // routeData.forEach((recorded, idx) => {
+        //   const diff = Math.sqrt(
+        //     Math.pow(currentAvgs.a - recorded.a, 2) + 
+        //     Math.pow(currentAvgs.b - recorded.b, 2)
+        //   );
+        //   if (diff < minDiff) {
+        //     minDiff = diff;
+        //     closestIdx = idx;
+        //   }
+        // });
+
+        // const percent = closestIdx / (routeData.length - 1);
+
+        let closestIndexA = 0;
+        let minDiffA = Infinity;
         routeData.forEach((recorded, idx) => {
-          const diff = Math.sqrt(
-            Math.pow(currentAvgs.a - recorded.a, 2) + 
-            Math.pow(currentAvgs.b - recorded.b, 2)
-          );
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestIdx = idx;
+            const diffA = Math.abs(currentAvgs.a - recorded.a);
+          if (diffA < minDiffA) {
+            minDiffA = diffA;
+            closestIndexA = idx;
           }
-        });
+        })
 
-        const percent = closestIdx / (routeData.length - 1);
+        let closestIndexB = 0;
+        let minDiffB = Infinity;
+        routeData.forEach((recorded, idx) => {
+            const diffB = Math.abs(currentAvgs.b - recorded.b);
+          if (diffB < minDiffB) {
+            minDiffB = diffB;
+            closestIndexB = idx;
+          }
+        })
 
-        // let closestIndexA = 0;
-        // let minDiffA = Infinity;
-        // routeData.forEach((recorded, idx) => {
-        //     const diffA = Math.abs(currentAvgs.a - recorded.a);
-        //   if (diffA < minDiffA) {
-        //     minDiffA = diffA;
-        //     closestIndexA = idx;
-        //   }
-        // })
+        const midIndex = (closestIndexA + closestIndexB) / 2
 
-        // let closestIndexB = 0;
-        // let minDiffB = Infinity;
-        // routeData.forEach((recorded, idx) => {
-        //     const diffB = Math.abs(currentAvgs.b - recorded.b);
-        //   if (diffB < minDiffB) {
-        //     minDiffB = diffB;
-        //     closestIndexB = idx;
-        //   }
-        // })
-
-        // const midIndex = (closestIndexA + closestIndexB) / 2
-
-        // const percent = midIndex / (routeData.length - 1);
-
+        const percent = midIndex / (routeData.length - 1);
+        
         document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
         updateMovingMarker(percent);
       });
