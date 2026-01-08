@@ -141,7 +141,8 @@
     const uuid = event.uuids[0].toLowerCase();
     const rssi = event.rssi;
     if (!rssi || rssi >= 0) {
-      document.getElementById('rssiA').innerText = `ここ`;
+      document.getElementById('rssiA').innerText = `ここ${rssi}`;
+      document.getElementById('rssiB').innerText = `ここ${uuid}`;
       return;
     }
 
