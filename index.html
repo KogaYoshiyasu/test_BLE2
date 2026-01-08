@@ -121,10 +121,12 @@
   // --- BLEコアロジック ---
   async function startScan() {
     try {
+      alert("1");
       const options = { 
         filters: [{ services: [UUID_A] }, { services: [UUID_B] }], 
         keepRepeatedDevices: true 
       };
+      alert("2");
       return await navigator.bluetooth.requestLEScan(options);
     } catch (e) {
       alert("BLEスキャンに失敗しました: " + e);
