@@ -144,7 +144,7 @@
     const rssi = event.rssi;
     if (!rssi || rssi >= 0) {
       document.getElementById('rssiA').innerText = `ここ${rssi}`;
-      document.getElementById('rssiB').innerText = `ここ${event.uuids}`;
+      document.getElementById('rssiB').innerText = `ここ${event.device}`;
       return;
     }
 
