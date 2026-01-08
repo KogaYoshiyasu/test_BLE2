@@ -200,7 +200,7 @@
 
   function createAdvertisementHandler(targetArray, onAverageReady) {
     return (event) => {
-      document.getElementById('avg').innerText = `ここ${event.uuids}`;
+      document.getElementById('avg').innerText = `ここ${event.uuids[1]}`;
       if (event.rssi !== undefined && event.rssi < 0) {
         targetArray.push(event.rssi);
         document.getElementById('rssi').innerText = `RSSI: ${event.rssi}`;
