@@ -58,7 +58,6 @@
   const BASE_URL = "https://test-server-757e.onrender.com";
   const maxSamples = 10; // 平均化するサンプル数
   
-  // ビーコンのUUID（環境に合わせて書き換えてください）
   const UUID_A = '12345678-1234-5678-1234-56789abcdef0'.toLowerCase();
   const UUID_B = '12345678-1234-5678-1234-56789abcdef1'.toLowerCase();
 
@@ -146,16 +145,18 @@
 
     if (uuid === UUID_A) {
       tempRSSI.a.push(rssi);
-      document.getElementById('rssiA').innerText = `A: ${rssi}`;
+      // document.getElementById('rssiA').innerText = `A: ${rssi}`;
     } else if (uuid === UUID_B) {
       tempRSSI.b.push(rssi);
-      document.getElementById('rssiB').innerText = `B: ${rssi}`;
+      // document.getElementById('rssiB').innerText = `B: ${rssi}`;
     }
 
     // 両方のビーコンから一定数サンプルが取れたら処理
     if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
       const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
       const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
+      document.getElementById('rssiA').innerText = `A: ${avgA}`;
+      document.getElementById('rssiB').innerText = `B: ${avgB}`;
       tempRSSI.a = [];
       tempRSSI.b = [];
       onPairReady({ a: avgA, b: avgB });
@@ -210,6 +211,7 @@
     if (routeData.length === 0) return alert("データがありません");
     scan = await startScan();
     tempRSSI = { a: [], b: [] };
+    isConfirmed = true
 
     advertisementHandler = (e) => {
       handleAdvertisement(e, (currentAvgs) => {
@@ -315,6 +317,7 @@
           </div>`;
         row.querySelector('.load-btn').onclick = () => {
           resetCanvas();
+          isConfirmed = true
           img.onload = () => {
             points = item.points;
             points.forEach((p, i) => drawPointUI(p.x, p.y, i + 1));
