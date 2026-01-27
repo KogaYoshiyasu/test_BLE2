@@ -168,6 +168,7 @@
         tempRSSI.a.push(rssi);
         if (tempRSSI.a.length > (maxSamples + updateInterval - 1)) {
           tempRSSI.a.splice(0, updateInterval);
+          flag = false;
         }
       }
     } else if (uuid === UUID_B) {
@@ -175,6 +176,7 @@
         tempRSSI.b.push(rssi);
         if (tempRSSI.b.length > (maxSamples + updateInterval - 1)) {
           tempRSSI.b.splice(0, updateInterval);
+          flag = false;
         }
       }
     }
