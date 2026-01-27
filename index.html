@@ -244,62 +244,123 @@
     document.getElementById('resetBtn').disabled = false;
   };
 
-  // --- 案内モード ---
-  document.getElementById('guide').onclick = async () => {
-    if (routeData.length === 0) return alert("データがありません");
-    scan = await startScan();
-    tempRSSI = { a: [], b: [] };
-    isConfirmed = true
+  // // --- 案内モード ---
+  // document.getElementById('guide').onclick = async () => {
+  //   if (routeData.length === 0) return alert("データがありません");
+  //   scan = await startScan();
+  //   tempRSSI = { a: [], b: [] };
+  //   isConfirmed = true
 
-    advertisementHandler = (e) => {
-      handleAdvertisement(e, (currentAvgs) => {
-        // 最も近い記録地点を検索（ユークリッド距離）
-        // let minDiff = Infinity;
-        // let closestIdx = 0;
+  //   advertisementHandler = (e) => {
+  //     handleAdvertisement(e, (currentAvgs) => {
+  //       // 最も近い記録地点を検索（ユークリッド距離）
+  //       // let minDiff = Infinity;
+  //       // let closestIdx = 0;
 
-        // routeData.forEach((recorded, idx) => {
-        //   const diff = Math.sqrt(
-        //     Math.pow(currentAvgs.a - recorded.a, 2) + 
-        //     Math.pow(currentAvgs.b - recorded.b, 2)
-        //   );
-        //   if (diff < minDiff) {
-        //     minDiff = diff;
-        //     closestIdx = idx;
-        //   }
-        // });
+  //       // routeData.forEach((recorded, idx) => {
+  //       //   const diff = Math.sqrt(
+  //       //     Math.pow(currentAvgs.a - recorded.a, 2) + 
+  //       //     Math.pow(currentAvgs.b - recorded.b, 2)
+  //       //   );
+  //       //   if (diff < minDiff) {
+  //       //     minDiff = diff;
+  //       //     closestIdx = idx;
+  //       //   }
+  //       // });
 
-        // const percent = closestIdx / (routeData.length - 1);
+  //       // const percent = closestIdx / (routeData.length - 1);
 
-        let closestIndexA = 0;
-        let minDiffA = Infinity;
-        routeData.forEach((recorded, idx) => {
-          const diffA = Math.abs(currentAvgs.a - recorded.a);
-          if (diffA < minDiffA) {
-            minDiffA = diffA;
-            closestIndexA = idx;
-          }
-        })
+  //       let closestIndexA = 0;
+  //       let minDiffA = Infinity;
+  //       routeData.forEach((recorded, idx) => {
+  //         const diffA = Math.abs(currentAvgs.a - recorded.a);
+  //         if (diffA < minDiffA) {
+  //           minDiffA = diffA;
+  //           closestIndexA = idx;
+  //         }
+  //       })
 
-        let closestIndexB = 0;
-        let minDiffB = Infinity;
-        routeData.forEach((recorded, idx) => {
-          const diffB = Math.abs(currentAvgs.b - recorded.b);
-          if (diffB < minDiffB) {
-            minDiffB = diffB;
-            closestIndexB = idx;
-          }
-        })
+  //       let closestIndexB = 0;
+  //       let minDiffB = Infinity;
+  //       routeData.forEach((recorded, idx) => {
+  //         const diffB = Math.abs(currentAvgs.b - recorded.b);
+  //         if (diffB < minDiffB) {
+  //           minDiffB = diffB;
+  //           closestIndexB = idx;
+  //         }
+  //       })
 
-        const midIndex = (closestIndexA + closestIndexB) / 2
+  //       const midIndex = (closestIndexA + closestIndexB) / 2
 
-        const percent = midIndex / (routeData.length - 1);
+  //       const percent = midIndex / (routeData.length - 1);
         
-        document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
-        updateMovingMarker(percent);
-      });
-    };
+  //       document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
+  //       updateMovingMarker(percent);
+  //     });
+  //   };
 
-    navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+  //   navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
+
+  //   document.getElementById('guide').disabled = true; 
+  //   document.getElementById('guideStop').disabled = false;
+  //   document.getElementById('scan').disabled = true; 
+  //   document.getElementById('stop').disabled = true;    
+  //   document.getElementById('undoBtn').disabled = true; 
+  //   document.getElementById('resetBtn').disabled = true;
+  // };
+
+  // --- 案内モード内 ---
+  document.getElementById('guide').onclick = async () => {
+      if (routeData.length === 0) return alert("データがありません");
+      scan = await startScan();
+      tempRSSI = { a: [], b: [] };
+      isConfirmed = true;
+      lastIndex = 0; // 開始時にリセット
+
+      advertisementHandler = (e) => {
+          handleAdvertisement(e, (currentAvgs) => {
+
+              let closestIndexA = 0;
+              let minScoreA = Infinity;
+              
+              routeData.forEach((recorded, idx) => {
+                  const diffA = Math.abs(currentAvgs.a - recorded.a);
+                  // 前回の位置から離れているほどスコアを悪くする（ペナルティ）
+                  const penalty = Math.abs(idx - lastIndex) * 0.1; 
+                  const scoreA = diffA + penalty;
+
+                  if (scoreA < minScoreA) {
+                      minScoreA = scoreA;
+                      closestIndexA = idx;
+                  }
+              });
+
+              let closestIndexB = 0;
+              let minScoreB = Infinity;
+              
+              routeData.forEach((recorded, idx) => {
+                  const diffB = Math.abs(currentAvgs.b - recorded.b);
+                  const penalty = Math.abs(idx - lastIndex) * 0.1;
+                  const scoreB = diffB + penalty;
+
+                  if (scoreB < minScoreB) {
+                      minScoreB = scoreB;
+                      closestIndexB = idx;
+                  }
+              });
+
+              const midIndex = (closestIndexA + closestIndexB) / 2;
+              
+              // 今回決まった位置を次回の「基準」として保存
+              lastIndex = Math.round(midIndex);
+
+              const percent = midIndex / (routeData.length - 1);
+              
+              document.getElementById('pVal').innerText = (percent * 100).toFixed(1) + '%';
+              updateMovingMarker(percent);
+          });
+      };
+        navigator.bluetooth.addEventListener('advertisementreceived', advertisementHandler);
 
     document.getElementById('guide').disabled = true; 
     document.getElementById('guideStop').disabled = false;
