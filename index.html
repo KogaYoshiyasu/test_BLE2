@@ -186,11 +186,11 @@
 
         flag = true;
         
-        const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
-        const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
+        const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples)).toFixed(1);
+        const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples)).toFixed(1);
 
-        document.getElementById('rssiA').innerText = `A: ${avgA.toFixed(1)}`;
-        document.getElementById('rssiB').innerText = `B: ${avgB.toFixed(1)}`;
+        document.getElementById('rssiA').innerText = `A: ${avgA}`;
+        document.getElementById('rssiB').innerText = `B: ${avgB}`;
 
         onPairReady({ a: avgA, b: avgB });
       }
