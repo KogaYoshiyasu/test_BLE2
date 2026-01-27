@@ -56,7 +56,8 @@
 
 <script>
   const BASE_URL = "https://test-server-757e.onrender.com";
-  const maxSamples = 10; // 平均化するサンプル数
+  const maxSamples = 30; // 平均化するサンプル数
+  const updateInterval = 10;// 何個新しいデータが溜まったら更新するか
   
   const UUID_A = '12345678-1234-5678-1234-56789abcdef0'.toLowerCase();
   const UUID_B = '12345678-1234-5678-1234-56789abcdef1'.toLowerCase();
@@ -143,24 +144,48 @@
       return;
     }
 
-    if (uuid === UUID_A) {
-      tempRSSI.a.push(rssi);
-      // document.getElementById('rssiA').innerText = `A: ${rssi}`;
-    } else if (uuid === UUID_B) {
-      tempRSSI.b.push(rssi);
-      // document.getElementById('rssiB').innerText = `B: ${rssi}`;
-    }
+    // if (uuid === UUID_A) {
+    //   tempRSSI.a.push(rssi);
+    // } else if (uuid === UUID_B) {
+    //   tempRSSI.b.push(rssi);
+    // }
 
-    // 両方のビーコンから一定数サンプルが取れたら処理
-    if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
+    // // 両方のビーコンから一定数サンプルが取れたら処理
+    // if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
+    //   const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
+    //   const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
+    //   document.getElementById('rssiA').innerText = `A: ${avgA}`;
+    //   document.getElementById('rssiB').innerText = `B: ${avgB}`;
+    //   tempRSSI.a = [];
+    //   tempRSSI.b = [];
+    //   onPairReady({ a: avgA, b: avgB });
+    // }
+
+  if (uuid === UUID_A) {
+    tempRSSI.a.push(rssi);
+    if (tempRSSI.a.length > (maxSamples + updateInterval - 1)) {
+      tempRSSI.a.splice(0, updateInterval);
+    }
+  } else if (uuid === UUID_B) {
+    tempRSSI.b.push(rssi);
+    if (tempRSSI.b.length > (maxSamples + updateInterval - 1)) {
+      tempRSSI.b.splice(0, updateInterval);
+    }
+  }
+
+  if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
+    if (tempRSSI.a.length % updateInterval === 0 && tempRSSI.b.length % updateInterval === 0) {
+      
       const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
       const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
-      document.getElementById('rssiA').innerText = `A: ${avgA}`;
-      document.getElementById('rssiB').innerText = `B: ${avgB}`;
-      tempRSSI.a = [];
-      tempRSSI.b = [];
+
+      document.getElementById('rssiA').innerText = `A: ${avgA.toFixed(1)}`;
+      document.getElementById('rssiB').innerText = `B: ${avgB.toFixed(1)}`;
+
       onPairReady({ a: avgA, b: avgB });
     }
+  }
+
   }
 
   // --- スキャン（記録モード） ---
@@ -235,7 +260,7 @@
         let closestIndexA = 0;
         let minDiffA = Infinity;
         routeData.forEach((recorded, idx) => {
-            const diffA = Math.abs(currentAvgs.a - recorded.a);
+          const diffA = Math.abs(currentAvgs.a - recorded.a);
           if (diffA < minDiffA) {
             minDiffA = diffA;
             closestIndexA = idx;
@@ -245,7 +270,7 @@
         let closestIndexB = 0;
         let minDiffB = Infinity;
         routeData.forEach((recorded, idx) => {
-            const diffB = Math.abs(currentAvgs.b - recorded.b);
+          const diffB = Math.abs(currentAvgs.b - recorded.b);
           if (diffB < minDiffB) {
             minDiffB = diffB;
             closestIndexB = idx;
