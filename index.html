@@ -67,7 +67,8 @@
   let tempRSSI = { a: [], b: [] };
   let scan, advertisementHandler;
   let isConfirmed = false;
-  let flag = false;
+  let flagA = false;
+  let flagB = false;
 
   const container = document.getElementById('container');
   const img = document.getElementById('img');
@@ -107,7 +108,8 @@
   function resetCanvas() {
     points = [];
     isConfirmed = false;
-    flag = false;
+    flagA = false;
+    flagB = false;
     container.querySelectorAll('.point').forEach(p => p.remove());
     document.getElementById('pVal').innerText = '0.0%';
     document.getElementById('rssiA').innerText = `A: --`;
@@ -164,19 +166,19 @@
     // }
 
     if (uuid === UUID_A) {
-      if (tempRSSI.a.length < maxSamples || flag){
+      if (tempRSSI.a.length < maxSamples || flagA){
         tempRSSI.a.push(rssi);
         if (tempRSSI.a.length > (maxSamples + updateInterval - 1)) {
           tempRSSI.a.splice(0, updateInterval);
-          flag = false;
+          flagA = false;
         }
       }
     } else if (uuid === UUID_B) {
-      if (tempRSSI.b.length < maxSamples || flag){
+      if (tempRSSI.b.length < maxSamples || flagB){
         tempRSSI.b.push(rssi);
         if (tempRSSI.b.length > (maxSamples + updateInterval - 1)) {
           tempRSSI.b.splice(0, updateInterval);
-          flag = false;
+          flagB = false;
         }
       }
     }
@@ -184,7 +186,8 @@
     if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
       if (tempRSSI.a.length % updateInterval === 0 && tempRSSI.b.length % updateInterval === 0) {
 
-        flag = true;
+        flagA = true;
+        flagB = true;
         
         const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples)).toFixed(1);
         const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples)).toFixed(1);
