@@ -161,30 +161,34 @@
     //   onPairReady({ a: avgA, b: avgB });
     // }
 
-  if (uuid === UUID_A) {
-    tempRSSI.a.push(rssi);
-    if (tempRSSI.a.length > (maxSamples + updateInterval - 1)) {
-      tempRSSI.a.splice(0, updateInterval);
+    if (uuid === UUID_A) {
+      if (tempRSSI.a.length < maxSamples){
+        tempRSSI.a.push(rssi);
+        if (tempRSSI.a.length > (maxSamples + updateInterval - 1)) {
+          tempRSSI.a.splice(0, updateInterval);
+        }
     }
-  } else if (uuid === UUID_B) {
-    tempRSSI.b.push(rssi);
-    if (tempRSSI.b.length > (maxSamples + updateInterval - 1)) {
-      tempRSSI.b.splice(0, updateInterval);
+    } else if (uuid === UUID_B) {
+      if (tempRSSI.b.length < maxSamples){
+        tempRSSI.b.push(rssi);
+        if (tempRSSI.b.length > (maxSamples + updateInterval - 1)) {
+          tempRSSI.b.splice(0, updateInterval);
+        }
+      }
     }
-  }
 
-  if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
-    if (tempRSSI.a.length % updateInterval === 0 && tempRSSI.b.length % updateInterval === 0) {
-      
-      const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
-      const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
+    if (tempRSSI.a.length >= maxSamples && tempRSSI.b.length >= maxSamples) {
+      if (tempRSSI.a.length % updateInterval === 0 && tempRSSI.b.length % updateInterval === 0) {
+        
+        const avgA = calculateAverage(tempRSSI.a.slice(-maxSamples));
+        const avgB = calculateAverage(tempRSSI.b.slice(-maxSamples));
 
-      document.getElementById('rssiA').innerText = `A: ${avgA.toFixed(1)}`;
-      document.getElementById('rssiB').innerText = `B: ${avgB.toFixed(1)}`;
+        document.getElementById('rssiA').innerText = `A: ${avgA.toFixed(1)}`;
+        document.getElementById('rssiB').innerText = `B: ${avgB.toFixed(1)}`;
 
-      onPairReady({ a: avgA, b: avgB });
+        onPairReady({ a: avgA, b: avgB });
+      }
     }
-  }
 
   }
 
