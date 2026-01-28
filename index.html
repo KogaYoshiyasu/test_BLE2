@@ -145,7 +145,7 @@
   function handleAdvertisement(event, onPairReady) {
     const uuid = event.uuids[1].toLowerCase();
     const rssi = event.rssi;
-    if (!rssi || rssi >= 0 || rssi < -100) {
+    if (!rssi || rssi >= 30 || rssi < -100) {
       return;
     }
 
