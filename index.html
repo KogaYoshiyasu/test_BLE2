@@ -58,6 +58,7 @@
   const BASE_URL = "https://test-server-757e.onrender.com";
   const maxSamples = 30; // 平均化するサンプル数
   const updateInterval = 10;// 何個新しいデータが溜まったら更新するか
+  const weight = 0.1;
   
   const UUID_A = '12345678-1234-5678-1234-56789abcdef0'.toLowerCase();
   const UUID_B = '12345678-1234-5678-1234-56789abcdef1'.toLowerCase();
@@ -144,7 +145,7 @@
   function handleAdvertisement(event, onPairReady) {
     const uuid = event.uuids[1].toLowerCase();
     const rssi = event.rssi;
-    if (!rssi || rssi >= 0) {
+    if (!rssi || rssi >= 0 || rssi < -100) {
       return;
     }
 
@@ -326,7 +327,7 @@
               routeData.forEach((recorded, idx) => {
                   const diffA = Math.abs(currentAvgs.a - recorded.a);
                   // 前回の位置から離れているほどスコアを悪くする（ペナルティ）
-                  const penalty = Math.abs(idx - lastIndex) * 0.1; 
+                  const penalty = Math.abs(idx - lastIndex) * weight; 
                   const scoreA = diffA + penalty;
 
                   if (scoreA < minScoreA) {
@@ -340,7 +341,7 @@
               
               routeData.forEach((recorded, idx) => {
                   const diffB = Math.abs(currentAvgs.b - recorded.b);
-                  const penalty = Math.abs(idx - lastIndex) * 0.1;
+                  const penalty = Math.abs(idx - lastIndex) * weight;
                   const scoreB = diffB + penalty;
 
                   if (scoreB < minScoreB) {
